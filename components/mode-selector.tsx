@@ -54,7 +54,7 @@ export function ModeSelector({ onSelectMode }: ModeSelectorProps) {
           transition={{ delay: 0.1 }}
         >
           <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tighter italic text-balance">
-            Pick Your Style
+            Select Your Vision
           </h2>
         </motion.div>
         <motion.p
