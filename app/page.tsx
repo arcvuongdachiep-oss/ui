@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { RotateCcw, Coins, Crown, AlertCircle, X, LogOut } from "lucide-react";
 import Image from "next/image";
@@ -18,6 +18,8 @@ import {
   type TokenEstimate 
 } from "@/lib/image-optimizer";
 
+const LS_KEY = "hiepd5_user";
+
 interface UserProfile {
   credits: number;
   role: string;
@@ -29,6 +31,7 @@ interface UserProfile {
 
 export default function Home() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [selectedMode, setSelectedMode] = useState<ModeId | null>(null);
   const [baseImages, setBaseImages] = useState<string[]>([]);
   const [optimizedBaseImages, setOptimizedBaseImages] = useState<OptimizedImage[]>([]);
@@ -44,81 +47,66 @@ export default function Home() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
-  // Client-side auth check + fetch profile directly from Supabase
+  // Step 1: If coming from callback with URL params, save to localStorage immediately
   useEffect(() => {
-    console.log("[v0] page.tsx - useEffect started");
-    const supabase = createClient();
+    const uid = searchParams.get("_uid");
+    const email = searchParams.get("_email");
+    const name = searchParams.get("_name");
+    const avatar = searchParams.get("_avatar");
 
-    const loadUser = async () => {
-      console.log("[v0] page.tsx - loadUser called");
+    if (uid && email) {
+      // Save basic info from URL params - we know user is authenticated
+      const cached = { uid, email, fullName: name || "", avatarUrl: avatar || "", credits: 10, role: "free", isPro: false };
+      localStorage.setItem(LS_KEY, JSON.stringify(cached));
+      setUserProfile({ credits: 10, role: "free", isPro: false, email, fullName: name || "", avatarUrl: avatar || "" });
       
-      // Get user directly from Supabase client (bypasses server cookies issue)
-      const { data: { user }, error } = await supabase.auth.getUser();
-      
-      console.log("[v0] page.tsx - getUser result:", { 
-        hasUser: !!user, 
-        email: user?.email, 
-        error: error?.message 
-      });
-      
-      if (error || !user) {
-        console.log("[v0] page.tsx - No user found, redirecting to /login");
-        router.push("/login");
+      // Clean URL params without reload
+      const url = new URL(window.location.href);
+      url.searchParams.delete("_uid");
+      url.searchParams.delete("_email");
+      url.searchParams.delete("_name");
+      url.searchParams.delete("_avatar");
+      window.history.replaceState({}, "", url.toString());
+
+      // Then fetch actual profile from Supabase to get credits
+      const supabase = createClient();
+      supabase.from("profiles").select("credits, role, email, full_name, avatar_url").eq("id", uid).single()
+        .then(({ data: profile }) => {
+          if (profile) {
+            const updated = { uid, email: profile.email || email, fullName: profile.full_name || name || "", avatarUrl: profile.avatar_url || avatar || "", credits: profile.credits ?? 10, role: profile.role ?? "free", isPro: profile.role === "pro" };
+            localStorage.setItem(LS_KEY, JSON.stringify(updated));
+            setUserProfile({ credits: updated.credits, role: updated.role, isPro: updated.isPro, email: updated.email, fullName: updated.fullName, avatarUrl: updated.avatarUrl });
+          }
+        });
+      return;
+    }
+
+    // Step 2: Try to load from localStorage first (instant display)
+    const cached = localStorage.getItem(LS_KEY);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        setUserProfile({ credits: parsed.credits ?? 10, role: parsed.role ?? "free", isPro: parsed.isPro ?? false, email: parsed.email, fullName: parsed.fullName, avatarUrl: parsed.avatarUrl });
+        
+        // Refresh credits from Supabase in background
+        const supabase = createClient();
+        supabase.from("profiles").select("credits, role, email, full_name, avatar_url").eq("id", parsed.uid).single()
+          .then(({ data: profile }) => {
+            if (profile) {
+              const updated = { ...parsed, email: profile.email || parsed.email, fullName: profile.full_name || parsed.fullName, avatarUrl: profile.avatar_url || parsed.avatarUrl, credits: profile.credits ?? parsed.credits, role: profile.role ?? parsed.role, isPro: profile.role === "pro" };
+              localStorage.setItem(LS_KEY, JSON.stringify(updated));
+              setUserProfile({ credits: updated.credits, role: updated.role, isPro: updated.isPro, email: updated.email, fullName: updated.fullName, avatarUrl: updated.avatarUrl });
+            }
+          });
         return;
+      } catch {
+        localStorage.removeItem(LS_KEY);
       }
+    }
 
-      console.log("[v0] page.tsx - User found, fetching profile for:", user.id);
-      
-      // Fetch profile from database
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("credits, role, email, full_name, avatar_url")
-        .eq("id", user.id)
-        .single();
-
-      console.log("[v0] page.tsx - Profile result:", { 
-        hasProfile: !!profile, 
-        credits: profile?.credits,
-        role: profile?.role,
-        error: profileError?.message 
-      });
-
-      if (profile) {
-        setUserProfile({
-          credits: profile.credits ?? 10,
-          role: profile.role ?? "free",
-          isPro: profile.role === "pro",
-          email: profile.email || user.email,
-          fullName: profile.full_name,
-          avatarUrl: profile.avatar_url,
-        });
-        console.log("[v0] page.tsx - Profile set from database");
-      } else {
-        // Profile not created yet - use data from auth user
-        setUserProfile({
-          credits: 10,
-          role: "free",
-          isPro: false,
-          email: user.email,
-          fullName: user.user_metadata?.full_name || user.user_metadata?.name,
-          avatarUrl: user.user_metadata?.avatar_url || user.user_metadata?.picture,
-        });
-        console.log("[v0] page.tsx - Profile set from user metadata");
-      }
-    };
-
-    loadUser();
-
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("[v0] page.tsx - Auth state changed:", event, !!session);
-      if (event === "SIGNED_OUT" || !session) {
-        router.push("/login");
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [router]);
+    // Step 3: No cache - redirect to login
+    router.push("/login");
+  }, [router, searchParams]);
 
   // Calculate token estimate when images change
   useEffect(() => {
@@ -362,6 +350,7 @@ export default function Home() {
                     </div>
                     <button
                       onClick={async () => {
+                        localStorage.removeItem(LS_KEY);
                         const supabase = createClient();
                         await supabase.auth.signOut();
                         router.push("/login");

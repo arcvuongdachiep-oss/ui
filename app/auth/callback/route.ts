@@ -146,6 +146,25 @@ export async function GET(request: Request) {
     }
   }
 
-  console.log("[v0] Callback - Redirecting to home with cookies");
-  return redirectResponse;
+  // Also redirect with user data in URL so client can save to localStorage
+  const homeUrl = new URL("/", origin);
+  if (user) {
+    homeUrl.searchParams.set("_uid", user.id);
+    homeUrl.searchParams.set("_email", user.email || "");
+    homeUrl.searchParams.set("_name", user.user_metadata?.full_name || user.user_metadata?.name || "");
+    homeUrl.searchParams.set("_avatar", user.user_metadata?.avatar_url || user.user_metadata?.picture || "");
+  }
+
+  const finalResponse = NextResponse.redirect(homeUrl);
+  // Copy all cookies from redirectResponse to finalResponse
+  redirectResponse.cookies.getAll().forEach(cookie => {
+    finalResponse.cookies.set(cookie.name, cookie.value, {
+      path: "/",
+      sameSite: "lax",
+      httpOnly: true,
+    });
+  });
+
+  console.log("[v0] Callback - Final redirect to:", homeUrl.toString());
+  return finalResponse;
 }
