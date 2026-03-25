@@ -41,9 +41,10 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Auth callback should never be blocked - it handles the OAuth response
+  // Auth callback and API routes should never be blocked
   const isAuthCallback = request.nextUrl.pathname.startsWith('/auth/callback')
-  if (isAuthCallback) {
+  const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
+  if (isAuthCallback || isApiRoute) {
     return supabaseResponse
   }
 
@@ -66,6 +67,20 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
+  }
+
+  // Check if user email is verified (email_confirmed_at from Supabase Auth)
+  if (isProtectedRoute && user) {
+    // Get full user data to check email_confirmed_at
+    const { data: userData } = await supabase.auth.getUser()
+    const emailConfirmed = userData?.user?.email_confirmed_at
+    
+    // If email not confirmed, redirect to a verification page
+    if (!emailConfirmed) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/verify-email'
+      return NextResponse.redirect(url)
+    }
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
