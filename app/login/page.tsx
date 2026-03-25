@@ -84,6 +84,7 @@ export default function LoginPage() {
               alt="HIEPD5 Logo"
               width={44}
               height={44}
+              loading="eager"
               className="w-full h-full object-cover"
             />
           </motion.div>
