@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 
@@ -6,7 +7,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
 
-  // Production URL - always redirect to hiepd5.com
+  // Production URL
   const productionUrl = "https://hiepd5.com";
   const isLocalEnv = process.env.NODE_ENV === "development";
   const baseUrl = isLocalEnv ? new URL(request.url).origin : productionUrl;
@@ -15,11 +16,14 @@ export async function GET(request: Request) {
     const cookieStore = await cookies();
     const headerStore = await headers();
     
-    // Get user IP address
+    // Get user IP address from headers
     const forwardedFor = headerStore.get("x-forwarded-for");
     const realIp = headerStore.get("x-real-ip");
     const userIp = forwardedFor?.split(",")[0]?.trim() || realIp || "unknown";
     
+    console.log("[v0] Callback - IP detected:", userIp);
+
+    // Create client for session handling
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -34,9 +38,7 @@ export async function GET(request: Request) {
                 cookieStore.set(name, value, options)
               );
             } catch {
-              // The `setAll` method was called from a Server Component.
-              // This can be ignored if you have middleware refreshing
-              // user sessions.
+              // Ignore
             }
           },
         },
@@ -46,64 +48,79 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      // Get the authenticated user
+      // Get user after session exchange
       const { data: { user } } = await supabase.auth.getUser();
       
+      console.log("[v0] Callback - User ID:", user?.id);
+      console.log("[v0] Callback - User email:", user?.email);
+
       if (user) {
-        // Check if this IP has been used before by another user
-        const { data: existingIpRecords } = await supabase
+        // Use SERVICE ROLE client to bypass RLS for profile updates
+        const supabaseAdmin = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!,
+          { auth: { persistSession: false } }
+        );
+
+        // Check if this IP has been used before by ANOTHER user
+        const { data: existingIpRecords, error: ipCheckError } = await supabaseAdmin
           .from("profiles")
-          .select("id, last_ip")
+          .select("id")
           .eq("last_ip", userIp)
           .neq("id", user.id);
+        
+        console.log("[v0] Callback - IP check error:", ipCheckError);
+        console.log("[v0] Callback - Existing IP records:", existingIpRecords);
         
         const ipAlreadyUsed = existingIpRecords && existingIpRecords.length > 0;
         
         // Check if user profile already exists
-        const { data: existingProfile } = await supabase
+        const { data: existingProfile, error: profileCheckError } = await supabaseAdmin
           .from("profiles")
-          .select("id, credits")
+          .select("id, credits, last_ip")
           .eq("id", user.id)
           .single();
         
+        console.log("[v0] Callback - Profile check error:", profileCheckError);
+        console.log("[v0] Callback - Existing profile:", existingProfile);
+        
         if (existingProfile) {
-          // User exists - just update last_ip
-          await supabase
+          // User exists - UPDATE last_ip
+          const { error: updateError } = await supabaseAdmin
             .from("profiles")
             .update({ last_ip: userIp })
             .eq("id", user.id);
+          
+          console.log("[v0] Callback - Update IP result:", updateError ? updateError : "SUCCESS");
         } else {
-          // New user - check IP for anti-spam
-          // If IP already used by another account, give 0 credits
+          // New user - INSERT with anti-spam check
           const newCredits = ipAlreadyUsed ? 0 : 10;
           
-          await supabase
+          console.log("[v0] Callback - IP already used:", ipAlreadyUsed);
+          console.log("[v0] Callback - New credits:", newCredits);
+          
+          const { error: insertError } = await supabaseAdmin
             .from("profiles")
-            .upsert({
+            .insert({
               id: user.id,
               email: user.email,
               full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
               avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
               role: "free",
               credits: newCredits,
-              is_verified: user.email_confirmed_at ? true : false,
+              is_verified: !!user.email_confirmed_at,
               last_ip: userIp,
-            }, { onConflict: "id" });
+            });
+          
+          console.log("[v0] Callback - Insert profile result:", insertError ? insertError : "SUCCESS");
         }
-        
-        // Track IP login for additional anti-abuse
-        await supabase.rpc("track_ip_login", {
-          p_ip_address: userIp,
-          p_user_id: user.id,
-          p_email: user.email || "",
-        });
       }
       
-      // Redirect to home page after successful login
       return NextResponse.redirect(`${baseUrl}/`);
+    } else {
+      console.log("[v0] Callback - Session exchange error:", error);
     }
   }
 
-  // Return to login with error
   return NextResponse.redirect(`${baseUrl}/login?error=Could not authenticate`);
 }

@@ -6,32 +6,45 @@ export async function GET() {
   try {
     const supabase = await createClient();
     
+    console.log("[v0] Credits API - Getting user...");
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
+    console.log("[v0] Credits API - User:", user?.id, user?.email);
+    console.log("[v0] Credits API - User error:", userError);
+    
     if (userError || !user) {
+      console.log("[v0] Credits API - Unauthorized, no user");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    console.log("[v0] Credits API - Fetching profile for user:", user.id);
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("credits, role, email, full_name, avatar_url")
       .eq("id", user.id)
       .single();
 
+    console.log("[v0] Credits API - Profile:", profile);
+    console.log("[v0] Credits API - Profile error:", profileError);
+
     if (profileError) {
+      console.log("[v0] Credits API - Profile not found");
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
-    return NextResponse.json({
-      credits: profile.credits,
-      role: profile.role,
+    const response = {
+      credits: profile.credits ?? 10,
+      role: profile.role ?? "free",
       isPro: profile.role === "pro",
       email: profile.email || user.email,
       fullName: profile.full_name,
       avatarUrl: profile.avatar_url,
-    });
+    };
+    
+    console.log("[v0] Credits API - Returning:", response);
+    return NextResponse.json(response);
   } catch (error) {
-    console.error("Get credits error:", error);
+    console.error("[v0] Credits API - Error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

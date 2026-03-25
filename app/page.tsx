@@ -45,13 +45,20 @@ export default function Home() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
+        console.log("[v0] Fetching user profile...");
         const response = await fetch("/api/credits");
+        console.log("[v0] Profile response status:", response.status);
+        
         if (response.ok) {
           const data = await response.json();
+          console.log("[v0] Profile data received:", data);
           setUserProfile(data);
+        } else {
+          const errorData = await response.json();
+          console.log("[v0] Profile fetch error:", errorData);
         }
       } catch (error) {
-        console.error("Error fetching profile:", error);
+        console.error("[v0] Error fetching profile:", error);
       }
     };
     fetchProfile();
