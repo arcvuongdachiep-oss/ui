@@ -296,7 +296,7 @@ export function ImageUploader({
             {cooldownTime > 0 && (
               <div className="flex items-center gap-1 text-[#888]">
                 <Clock className="w-3 h-3" />
-                <span>Rate limit: 2 luot / 3 phut</span>
+                <span>Vui long doi {cooldownTime} giay de tiep tuc</span>
               </div>
             )}
           </div>
