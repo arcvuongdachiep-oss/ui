@@ -14,33 +14,16 @@ export default function LoginPage() {
 
   // Check if user is already logged in
   useEffect(() => {
-    console.log("[v0] Login page - useEffect started");
-    
     const checkUser = async () => {
-      console.log("[v0] Login page - checkUser called");
       const supabase = createClient();
-      
-      // First try getSession (faster, uses cookies)
-      const { data: sessionData } = await supabase.auth.getSession();
-      console.log("[v0] Login page - getSession result:", { 
-        hasSession: !!sessionData.session,
-        userEmail: sessionData.session?.user?.email 
-      });
-      
-      // Then try getUser (more reliable, validates with server)
-      const { data: { user }, error } = await supabase.auth.getUser();
-      console.log("[v0] Login page - getUser result:", { 
-        hasUser: !!user, 
-        email: user?.email,
-        error: error?.message 
-      });
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log("[v0] Login page - Checking existing user:", user?.email);
       
       if (user) {
         console.log("[v0] Login page - User already logged in, redirecting to home");
         router.push("/");
         return;
       }
-      console.log("[v0] Login page - No user found, showing login form");
       setCheckingAuth(false);
     };
     checkUser();
@@ -101,7 +84,6 @@ export default function LoginPage() {
               alt="HIEPD5 Logo"
               width={44}
               height={44}
-              loading="eager"
               className="w-full h-full object-cover"
             />
           </motion.div>

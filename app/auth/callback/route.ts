@@ -1,4 +1,4 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
@@ -25,13 +25,7 @@ export async function GET(request: Request) {
   const userIp = forwardedFor?.split(",")[0]?.trim() || realIp || cfConnectingIp || "127.0.0.1";
   console.log("[v0] Callback - User IP:", userIp);
 
-  // Create the redirect response FIRST
-  const redirectResponse = NextResponse.redirect(new URL("/", origin));
-  
-  // Store cookies to set on response
-  const cookiesToSetOnResponse: { name: string; value: string; options: CookieOptions }[] = [];
-
-  // Create supabase client that will collect cookies
+  // Create supabase client that will set cookies
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -41,23 +35,20 @@ export async function GET(request: Request) {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
-          console.log("[v0] Callback - Collecting cookies:", cookiesToSet.map(c => c.name).join(", "));
-          // Collect cookies to set on response later
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookiesToSetOnResponse.push({ name, value, options });
-            // Also try to set on cookieStore
-            try {
+          console.log("[v0] Callback - Setting cookies:", cookiesToSet.map(c => c.name).join(", "));
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
               cookieStore.set(name, value, options);
-            } catch {
-              // Expected to fail in route handler
-            }
-          });
+            });
+          } catch (error) {
+            console.log("[v0] Callback - Cookie set error (expected in route handler):", error);
+          }
         },
       },
     }
   );
 
-  // Exchange code for session - this will call setAll with session cookies
+  // Exchange code for session
   const { data: sessionData, error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
   
   if (sessionError) {
@@ -68,22 +59,8 @@ export async function GET(request: Request) {
   console.log("[v0] Callback - Session exchange successful");
   console.log("[v0] Callback - User ID:", sessionData.user?.id);
   console.log("[v0] Callback - User email:", sessionData.user?.email);
-  console.log("[v0] Callback - Cookies collected:", cookiesToSetOnResponse.length);
 
-  // Set ALL collected cookies on the redirect response
-  cookiesToSetOnResponse.forEach(({ name, value, options }) => {
-    console.log("[v0] Callback - Setting cookie on response:", name);
-    redirectResponse.cookies.set(name, value, {
-      path: options.path || "/",
-      maxAge: options.maxAge,
-      domain: options.domain,
-      sameSite: (options.sameSite as "lax" | "strict" | "none") || "lax",
-      secure: options.secure ?? process.env.NODE_ENV === "production",
-      httpOnly: options.httpOnly ?? true,
-    });
-  });
-
-  // Get user from session for profile operations
+  // Get user from session
   const user = sessionData.user;
 
   if (user) {
@@ -146,6 +123,23 @@ export async function GET(request: Request) {
     }
   }
 
-  console.log("[v0] Callback - Redirecting to home with cookies");
-  return redirectResponse;
+  // Create redirect response and manually copy cookies to it
+  const redirectUrl = new URL("/", origin);
+  const response = NextResponse.redirect(redirectUrl);
+  
+  // Copy all cookies from the cookie store to the response
+  const allCookies = cookieStore.getAll();
+  console.log("[v0] Callback - Copying cookies to response:", allCookies.map(c => c.name).join(", "));
+  
+  allCookies.forEach((cookie) => {
+    response.cookies.set(cookie.name, cookie.value, {
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+    });
+  });
+
+  console.log("[v0] Callback - Redirecting to home");
+  return response;
 }

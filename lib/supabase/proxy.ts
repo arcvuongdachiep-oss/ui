@@ -41,8 +41,37 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Middleware only refreshes the session - route protection is handled client-side
-  // This avoids issues with cookies not being available in middleware in preview environments
+  console.log("[v0] Proxy - Path:", request.nextUrl.pathname, "User:", user?.email || "none");
+
+  // Auth callback and API routes should never be blocked
+  const isAuthCallback = request.nextUrl.pathname.startsWith('/auth/callback')
+  const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
+  if (isAuthCallback || isApiRoute) {
+    return supabaseResponse
+  }
+
+  // Protected routes that require authentication (including home page)
+  const protectedRoutes = ['/', '/dashboard', '/protected']
+  const isProtectedRoute = protectedRoutes.some(route => 
+    request.nextUrl.pathname === route || 
+    (route !== '/' && request.nextUrl.pathname.startsWith(route))
+  )
+
+  // If user is logged in and trying to access login page, redirect to home immediately
+  if (request.nextUrl.pathname === '/login' && user) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/'
+    return NextResponse.redirect(url)
+  }
+
+  // If no user and trying to access protected route, redirect to login
+  if (isProtectedRoute && !user) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
+  }
+
+  // Note: Email verification check removed because Google OAuth already verifies emails
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   // If you're creating a new response object with NextResponse.next() make sure to:

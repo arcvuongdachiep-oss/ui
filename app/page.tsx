@@ -1,15 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
-import { RotateCcw, Coins, Crown, AlertCircle, X, LogOut } from "lucide-react";
+import { RotateCcw, Coins, Crown, AlertCircle, X } from "lucide-react";
 import Image from "next/image";
 import type { ModeId, PromptResult } from "@/lib/types";
 import { ModeSelector, MODES } from "@/components/mode-selector";
 import { ImageUploader } from "@/components/image-uploader";
 import { ResultsPanel } from "@/components/results-panel";
-import { createClient } from "@/lib/supabase/client";
 import { 
   optimizeImage, 
   estimateTokens, 
@@ -28,7 +26,6 @@ interface UserProfile {
 }
 
 export default function Home() {
-  const router = useRouter();
   const [selectedMode, setSelectedMode] = useState<ModeId | null>(null);
   const [baseImages, setBaseImages] = useState<string[]>([]);
   const [optimizedBaseImages, setOptimizedBaseImages] = useState<OptimizedImage[]>([]);
@@ -44,81 +41,30 @@ export default function Home() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
-  // Client-side auth check + fetch profile directly from Supabase
+  // Fetch user profile on mount
   useEffect(() => {
-    console.log("[v0] page.tsx - useEffect started");
-    const supabase = createClient();
-
-    const loadUser = async () => {
-      console.log("[v0] page.tsx - loadUser called");
-      
-      // Get user directly from Supabase client (bypasses server cookies issue)
-      const { data: { user }, error } = await supabase.auth.getUser();
-      
-      console.log("[v0] page.tsx - getUser result:", { 
-        hasUser: !!user, 
-        email: user?.email, 
-        error: error?.message 
-      });
-      
-      if (error || !user) {
-        console.log("[v0] page.tsx - No user found, redirecting to /login");
-        router.push("/login");
-        return;
-      }
-
-      console.log("[v0] page.tsx - User found, fetching profile for:", user.id);
-      
-      // Fetch profile from database
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("credits, role, email, full_name, avatar_url")
-        .eq("id", user.id)
-        .single();
-
-      console.log("[v0] page.tsx - Profile result:", { 
-        hasProfile: !!profile, 
-        credits: profile?.credits,
-        role: profile?.role,
-        error: profileError?.message 
-      });
-
-      if (profile) {
-        setUserProfile({
-          credits: profile.credits ?? 10,
-          role: profile.role ?? "free",
-          isPro: profile.role === "pro",
-          email: profile.email || user.email,
-          fullName: profile.full_name,
-          avatarUrl: profile.avatar_url,
-        });
-        console.log("[v0] page.tsx - Profile set from database");
-      } else {
-        // Profile not created yet - use data from auth user
-        setUserProfile({
-          credits: 10,
-          role: "free",
-          isPro: false,
-          email: user.email,
-          fullName: user.user_metadata?.full_name || user.user_metadata?.name,
-          avatarUrl: user.user_metadata?.avatar_url || user.user_metadata?.picture,
-        });
-        console.log("[v0] page.tsx - Profile set from user metadata");
+    console.log("[v0] useEffect triggered - fetching profile...");
+    const fetchProfile = async () => {
+      try {
+        console.log("[v0] Fetching user profile from /api/credits...");
+        const response = await fetch("/api/credits");
+        console.log("[v0] Profile response status:", response.status);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log("[v0] User Credits:", data.credits, "Role:", data.role);
+          console.log("[v0] Full profile data:", JSON.stringify(data));
+          setUserProfile(data);
+        } else {
+          const errorData = await response.json();
+          console.log("[v0] Profile fetch error:", JSON.stringify(errorData));
+        }
+      } catch (error) {
+        console.error("[v0] Error fetching profile:", error);
       }
     };
-
-    loadUser();
-
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("[v0] page.tsx - Auth state changed:", event, !!session);
-      if (event === "SIGNED_OUT" || !session) {
-        router.push("/login");
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [router]);
+    fetchProfile();
+  }, []);
 
   // Calculate token estimate when images change
   useEffect(() => {
@@ -353,24 +299,11 @@ export default function Home() {
                     </div>
                   )}
                 </div>
-                {/* Dropdown */}
-                <div className="absolute right-0 top-full mt-2 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity z-50">
-                  <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl px-0 py-2 text-xs whitespace-nowrap shadow-xl min-w-[160px]">
-                    <div className="px-3 py-2 border-b border-[#2A2A2A] mb-1">
-                      <p className="text-[#E4E3E0] font-medium">{userProfile.fullName || userProfile.email}</p>
-                      <p className="text-[#666]">{userProfile.role === "pro" ? "Pro Member" : "Free Account"}</p>
-                    </div>
-                    <button
-                      onClick={async () => {
-                        const supabase = createClient();
-                        await supabase.auth.signOut();
-                        router.push("/login");
-                      }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-[#888] hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                    >
-                      <LogOut className="w-3 h-3" />
-                      <span>Dang xuat</span>
-                    </button>
+                {/* Tooltip */}
+                <div className="absolute right-0 top-full mt-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
+                  <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg px-3 py-2 text-xs whitespace-nowrap shadow-lg">
+                    <p className="text-[#E4E3E0] font-medium">{userProfile.fullName || userProfile.email}</p>
+                    <p className="text-[#666]">{userProfile.role === "pro" ? "Pro Member" : "Free Account"}</p>
                   </div>
                 </div>
               </div>
