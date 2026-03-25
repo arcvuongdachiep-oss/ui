@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Copy, Check, Layers } from "lucide-react";
 import type { ModeId, ModeConfig, PromptResult } from "@/lib/types";
@@ -8,17 +9,28 @@ interface ResultsPanelProps {
   selectedMode: ModeId;
   modeConfig: ModeConfig | undefined;
   results: PromptResult[];
-  copiedId: number | null;
-  onCopy: (text: string, index: number) => void;
 }
 
 export function ResultsPanel({
   selectedMode,
   modeConfig,
   results,
-  copiedId,
-  onCopy,
 }: ResultsPanelProps) {
+  // Track copied state separately for English and Vietnamese
+  const [copiedEn, setCopiedEn] = useState<number | null>(null);
+  const [copiedVi, setCopiedVi] = useState<number | null>(null);
+
+  const handleCopyEnglish = async (text: string, idx: number) => {
+    await navigator.clipboard.writeText(text);
+    setCopiedEn(idx);
+    setTimeout(() => setCopiedEn(null), 2000);
+  };
+
+  const handleCopyVietnamese = async (text: string, idx: number) => {
+    await navigator.clipboard.writeText(text);
+    setCopiedVi(idx);
+    setTimeout(() => setCopiedVi(null), 2000);
+  };
   return (
     <div className="lg:col-span-8 xl:col-span-9 space-y-6">
       <AnimatePresence mode="wait">
@@ -68,47 +80,48 @@ export function ResultsPanel({
                 className="bg-[#0A0A0A] border border-[#1A1A1A] rounded-2xl overflow-hidden group hover:border-[#F27D26]/30 transition-all"
               >
                 {/* Card Header */}
-                <div className="p-4 md:p-5 border-b border-[#1A1A1A] flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0D0D0D]">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl overflow-hidden border border-[#222] flex-shrink-0">
-                      <img
-                        src={res.baseImage}
-                        className="w-full h-full object-cover"
-                        alt={`Base ${idx}`}
-                      />
-                    </div>
-                    <div>
-                      <h4 className="text-[11px] md:text-[12px] font-black uppercase tracking-widest text-[#F27D26]">
-                        Result #{idx + 1}
-                      </h4>
-                      <p className="text-[8px] md:text-[9px] text-[#444] uppercase tracking-widest font-bold">
-                        {modeConfig?.title}
-                      </p>
-                    </div>
+                <div className="p-4 md:p-5 border-b border-[#1A1A1A] flex items-center gap-4 bg-[#0D0D0D]">
+                  <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl overflow-hidden border border-[#222] flex-shrink-0">
+                    <img
+                      src={res.baseImage}
+                      className="w-full h-full object-cover"
+                      alt={`Base ${idx}`}
+                    />
                   </div>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => onCopy(res.prompt, idx)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
-                      copiedId === idx
-                        ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                        : "bg-black border border-[#1A1A1A] hover:bg-[#F27D26] hover:text-black hover:border-transparent"
-                    }`}
-                  >
-                    {copiedId === idx ? <Check size={12} /> : <Copy size={12} />}
-                    {copiedId === idx ? "Copied!" : "Copy Prompt"}
-                  </motion.button>
+                  <div>
+                    <h4 className="text-[11px] md:text-[12px] font-black uppercase tracking-widest text-[#F27D26]">
+                      Result #{idx + 1}
+                    </h4>
+                    <p className="text-[8px] md:text-[9px] text-[#444] uppercase tracking-widest font-bold">
+                      {modeConfig?.title}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Card Content */}
                 <div className="p-5 md:p-8 grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+                  {/* English Prompt */}
                   <div className="space-y-3">
-                    <div className="flex items-center gap-2 opacity-40">
-                      <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest">
-                        English Prompt
-                      </span>
-                      <div className="h-[1px] flex-1 bg-white/10" />
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 opacity-40">
+                        <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest">
+                          English Prompt
+                        </span>
+                        <div className="h-[1px] w-12 bg-white/10" />
+                      </div>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleCopyEnglish(res.prompt, idx)}
+                        className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-semibold uppercase tracking-wider transition-all ${
+                          copiedEn === idx
+                            ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                            : "bg-[#1A1A1A] text-[#888] border border-[#2A2A2A] hover:bg-[#F27D26]/20 hover:text-[#F27D26] hover:border-[#F27D26]/30"
+                        }`}
+                      >
+                        {copiedEn === idx ? <Check size={10} /> : <Copy size={10} />}
+                        {copiedEn === idx ? "Da sao chep!" : "Copy"}
+                      </motion.button>
                     </div>
                     <motion.p
                       initial={{ opacity: 0 }}
@@ -120,18 +133,35 @@ export function ResultsPanel({
                     </motion.p>
                   </div>
 
+                  {/* Vietnamese Prompt */}
                   <div className="space-y-3">
-                    <div className="flex items-center gap-2 opacity-40">
-                      <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest">
-                        Tiếng Việt
-                      </span>
-                      <div className="h-[1px] flex-1 bg-white/10" />
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 opacity-40">
+                        <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest">
+                          Tieng Viet
+                        </span>
+                        <div className="h-[1px] w-12 bg-white/10" />
+                      </div>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleCopyVietnamese(res.vietnamese, idx)}
+                        className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-semibold uppercase tracking-wider transition-all ${
+                          copiedVi === idx
+                            ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                            : "bg-[#1A1A1A] text-[#888] border border-[#2A2A2A] hover:bg-[#F27D26]/20 hover:text-[#F27D26] hover:border-[#F27D26]/30"
+                        }`}
+                      >
+                        {copiedVi === idx ? <Check size={10} /> : <Copy size={10} />}
+                        {copiedVi === idx ? "Da sao chep!" : "Copy"}
+                      </motion.button>
                     </div>
                     <motion.p
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.3 }}
-                      className="text-[12px] md:text-[13px] font-serif italic leading-relaxed text-[#666]"
+                      className="text-[12px] md:text-[13px] leading-relaxed text-[#888] selection:bg-[#F27D26]/30"
+                      style={{ fontFamily: 'var(--font-vietnamese)' }}
                     >
                       {res.vietnamese}
                     </motion.p>

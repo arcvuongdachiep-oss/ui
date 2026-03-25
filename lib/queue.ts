@@ -16,7 +16,7 @@ let processing = 0;
 export const QUEUE_CONFIG = {
   MAX_CONCURRENT: 1,        // Max requests processing at once
   MAX_QUEUE_SIZE: 10,       // Max waiting requests
-  RATE_LIMIT_WINDOW: 180,   // 3 minutes in seconds
+  RATE_LIMIT_WINDOW: 60,    // 1 minute in seconds
   RATE_LIMIT_MAX: 2,        // Max requests per window
   REQUEST_TIMEOUT: 60000,   // 60 seconds timeout
 };

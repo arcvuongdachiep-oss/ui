@@ -277,8 +277,8 @@ export default function Home() {
         } : null);
       }
 
-      // Start 3-minute cooldown after successful request
-      startCooldown(180);
+      // Start 1-minute cooldown after successful request
+      startCooldown(60);
       
     } catch (error) {
       console.error("Error generating prompts:", error);
@@ -587,8 +587,6 @@ export default function Home() {
                   selectedMode={selectedMode}
                   modeConfig={modeConfig}
                   results={results}
-                  copiedId={copiedId}
-                  onCopy={copyToClipboard}
                 />
               </div>
             </motion.div>
