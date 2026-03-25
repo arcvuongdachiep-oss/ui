@@ -14,7 +14,7 @@ export async function GET() {
 
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("credits, role")
+      .select("credits, role, email, full_name, avatar_url")
       .eq("id", user.id)
       .single();
 
@@ -26,6 +26,9 @@ export async function GET() {
       credits: profile.credits,
       role: profile.role,
       isPro: profile.role === "pro",
+      email: profile.email || user.email,
+      fullName: profile.full_name,
+      avatarUrl: profile.avatar_url,
     });
   } catch (error) {
     console.error("Get credits error:", error);

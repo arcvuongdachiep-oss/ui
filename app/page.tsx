@@ -16,10 +16,13 @@ import {
   type TokenEstimate 
 } from "@/lib/image-optimizer";
 
-interface UserCredits {
+interface UserProfile {
   credits: number;
   role: string;
   isPro: boolean;
+  email?: string;
+  fullName?: string;
+  avatarUrl?: string;
 }
 
 export default function Home() {
@@ -34,24 +37,24 @@ export default function Home() {
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [tokenEstimate, setTokenEstimate] = useState<TokenEstimate | null>(null);
   const [savings, setSavings] = useState(0);
-  const [userCredits, setUserCredits] = useState<UserCredits | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
-  // Fetch user credits on mount
+  // Fetch user profile on mount
   useEffect(() => {
-    const fetchCredits = async () => {
+    const fetchProfile = async () => {
       try {
         const response = await fetch("/api/credits");
         if (response.ok) {
           const data = await response.json();
-          setUserCredits(data);
+          setUserProfile(data);
         }
       } catch (error) {
-        console.error("Error fetching credits:", error);
+        console.error("Error fetching profile:", error);
       }
     };
-    fetchCredits();
+    fetchProfile();
   }, []);
 
   // Calculate token estimate when images change
@@ -147,8 +150,8 @@ export default function Home() {
     const imageCount = optimizedBaseImages.length;
 
     // Check credits before generating (for non-Pro users)
-    if (userCredits && !userCredits.isPro && userCredits.credits < imageCount) {
-      setErrorMessage(`Ban can ${imageCount} luot de thuc hien, nhung chi con ${userCredits.credits} luot. Vui long nang cap Pro.`);
+    if (userProfile && !userProfile.isPro && userProfile.credits < imageCount) {
+      setErrorMessage(`Ban can ${imageCount} luot de thuc hien, nhung chi con ${userProfile.credits} luot. Vui long nang cap Pro.`);
       setShowUpgradeModal(true);
       return;
     }
@@ -189,7 +192,7 @@ export default function Home() {
       
       // Update local credits after successful generation
       if (data.remainingCredits !== undefined && data.remainingCredits >= 0) {
-        setUserCredits(prev => prev ? {
+        setUserProfile(prev => prev ? {
           ...prev,
           credits: data.remainingCredits,
         } : null);
@@ -248,24 +251,53 @@ export default function Home() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {/* Credits Display */}
-          {userCredits && (
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
-              userCredits.isPro 
-                ? "bg-gradient-to-r from-[#F27D26]/20 to-yellow-500/20 border border-[#F27D26]/30 text-[#F27D26]" 
-                : "bg-[#1A1A1A] border border-[#2A2A2A] text-[#888]"
-            }`}>
-              {userCredits.isPro ? (
-                <>
-                  <Crown className="w-4 h-4 text-[#F27D26]" />
-                  <span className="text-[#F27D26]">PRO</span>
-                </>
-              ) : (
-                <>
-                  <Coins className="w-4 h-4" />
-                  <span>{userCredits.credits} luot</span>
-                </>
-              )}
+          {/* User Profile & Credits Display */}
+          {userProfile && (
+            <div className="flex items-center gap-3">
+              {/* Credits Badge */}
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
+                userProfile.isPro 
+                  ? "bg-gradient-to-r from-[#F27D26]/20 to-yellow-500/20 border border-[#F27D26]/30 text-[#F27D26]" 
+                  : "bg-[#1A1A1A] border border-[#2A2A2A] text-[#888]"
+              }`}>
+                {userProfile.isPro ? (
+                  <>
+                    <Crown className="w-4 h-4 text-[#F27D26]" />
+                    <span className="text-[#F27D26]">PRO</span>
+                  </>
+                ) : (
+                  <>
+                    <Coins className="w-4 h-4" />
+                    <span>{userProfile.credits} luot</span>
+                  </>
+                )}
+              </div>
+              
+              {/* User Avatar */}
+              <div className="relative group">
+                <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-[#2A2A2A] hover:border-[#F27D26] transition-colors cursor-pointer">
+                  {userProfile.avatarUrl ? (
+                    <Image
+                      src={userProfile.avatarUrl}
+                      alt={userProfile.fullName || "User"}
+                      width={36}
+                      height={36}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-[#1A1A1A] flex items-center justify-center text-[#666] text-sm font-bold">
+                      {userProfile.email?.charAt(0).toUpperCase() || "U"}
+                    </div>
+                  )}
+                </div>
+                {/* Tooltip */}
+                <div className="absolute right-0 top-full mt-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
+                  <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg px-3 py-2 text-xs whitespace-nowrap shadow-lg">
+                    <p className="text-[#E4E3E0] font-medium">{userProfile.fullName || userProfile.email}</p>
+                    <p className="text-[#666]">{userProfile.role === "pro" ? "Pro Member" : "Free Account"}</p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
           
