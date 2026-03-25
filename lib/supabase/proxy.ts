@@ -41,9 +41,12 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Auth callback should never be blocked - it handles the OAuth response
+  console.log("[v0] Proxy - Path:", request.nextUrl.pathname, "User:", user?.email || "none");
+
+  // Auth callback and API routes should never be blocked
   const isAuthCallback = request.nextUrl.pathname.startsWith('/auth/callback')
-  if (isAuthCallback) {
+  const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
+  if (isAuthCallback || isApiRoute) {
     return supabaseResponse
   }
 
@@ -67,6 +70,8 @@ export async function updateSession(request: NextRequest) {
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
+
+  // Note: Email verification check removed because Google OAuth already verifies emails
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   // If you're creating a new response object with NextResponse.next() make sure to:

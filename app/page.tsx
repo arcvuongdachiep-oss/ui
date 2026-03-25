@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Coins, Crown, AlertCircle, X } from "lucide-react";
 import Image from "next/image";
 import type { ModeId, PromptResult } from "@/lib/types";
 import { ModeSelector, MODES } from "@/components/mode-selector";
@@ -16,6 +16,15 @@ import {
   type TokenEstimate 
 } from "@/lib/image-optimizer";
 
+interface UserProfile {
+  credits: number;
+  role: string;
+  isPro: boolean;
+  email?: string;
+  fullName?: string;
+  avatarUrl?: string;
+}
+
 export default function Home() {
   const [selectedMode, setSelectedMode] = useState<ModeId | null>(null);
   const [baseImages, setBaseImages] = useState<string[]>([]);
@@ -28,6 +37,34 @@ export default function Home() {
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [tokenEstimate, setTokenEstimate] = useState<TokenEstimate | null>(null);
   const [savings, setSavings] = useState(0);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  // Fetch user profile on mount
+  useEffect(() => {
+    console.log("[v0] useEffect triggered - fetching profile...");
+    const fetchProfile = async () => {
+      try {
+        console.log("[v0] Fetching user profile from /api/credits...");
+        const response = await fetch("/api/credits");
+        console.log("[v0] Profile response status:", response.status);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log("[v0] User Credits:", data.credits, "Role:", data.role);
+          console.log("[v0] Full profile data:", JSON.stringify(data));
+          setUserProfile(data);
+        } else {
+          const errorData = await response.json();
+          console.log("[v0] Profile fetch error:", JSON.stringify(errorData));
+        }
+      } catch (error) {
+        console.error("[v0] Error fetching profile:", error);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   // Calculate token estimate when images change
   useEffect(() => {
@@ -119,8 +156,18 @@ export default function Home() {
   const generatePrompts = async () => {
     if (!selectedMode || optimizedBaseImages.length === 0 || !optimizedRefImage) return;
 
+    const imageCount = optimizedBaseImages.length;
+
+    // Check credits before generating (for non-Pro users)
+    if (userProfile && !userProfile.isPro && userProfile.credits < imageCount) {
+      setErrorMessage(`Ban can ${imageCount} luot de thuc hien, nhung chi con ${userProfile.credits} luot. Vui long nang cap Pro.`);
+      setShowUpgradeModal(true);
+      return;
+    }
+
     setLoading(true);
     setResults([]);
+    setErrorMessage(null);
 
     try {
       // Send optimized images (already compressed base64)
@@ -138,14 +185,30 @@ export default function Home() {
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error("Failed to generate prompts");
+        if (data.needUpgrade) {
+          setErrorMessage(data.error);
+          setShowUpgradeModal(true);
+        } else {
+          setErrorMessage(data.error || "Co loi xay ra khi tao prompt");
+        }
+        return;
       }
 
-      const data = await response.json();
       setResults(data.results);
+      
+      // Update local credits after successful generation
+      if (data.remainingCredits !== undefined && data.remainingCredits >= 0) {
+        setUserProfile(prev => prev ? {
+          ...prev,
+          credits: data.remainingCredits,
+        } : null);
+      }
     } catch (error) {
       console.error("Error generating prompts:", error);
+      setErrorMessage("Co loi xay ra. Vui long thu lai.");
     } finally {
       setLoading(false);
     }
@@ -196,15 +259,163 @@ export default function Home() {
             </p>
           </div>
         </div>
-        <motion.button
-          whileHover={{ rotate: -180 }}
-          transition={{ duration: 0.3 }}
-          onClick={reset}
-          className="p-2.5 hover:bg-[#1A1A1A] rounded-full transition-colors text-[#444] hover:text-[#F27D26]"
-        >
-          <RotateCcw className="w-5 h-5" />
-        </motion.button>
+        <div className="flex items-center gap-3">
+          {/* User Profile & Credits Display */}
+          {userProfile ? (
+            <div className="flex items-center gap-3">
+              {/* Credits Badge */}
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
+                userProfile.isPro 
+                  ? "bg-gradient-to-r from-[#F27D26]/20 to-yellow-500/20 border border-[#F27D26]/30 text-[#F27D26]" 
+                  : "bg-[#1A1A1A] border border-[#2A2A2A] text-[#888]"
+              }`}>
+                {userProfile.isPro ? (
+                  <>
+                    <Crown className="w-4 h-4 text-[#F27D26]" />
+                    <span className="text-[#F27D26]">PRO</span>
+                  </>
+                ) : (
+                  <>
+                    <Coins className="w-4 h-4" />
+                    <span>{userProfile.credits} luot</span>
+                  </>
+                )}
+              </div>
+              
+              {/* User Avatar */}
+              <div className="relative group">
+                <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-[#2A2A2A] hover:border-[#F27D26] transition-colors cursor-pointer">
+                  {userProfile.avatarUrl ? (
+                    <Image
+                      src={userProfile.avatarUrl}
+                      alt={userProfile.fullName || "User"}
+                      width={36}
+                      height={36}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-[#1A1A1A] flex items-center justify-center text-[#666] text-sm font-bold">
+                      {userProfile.email?.charAt(0).toUpperCase() || "U"}
+                    </div>
+                  )}
+                </div>
+                {/* Tooltip */}
+                <div className="absolute right-0 top-full mt-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
+                  <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg px-3 py-2 text-xs whitespace-nowrap shadow-lg">
+                    <p className="text-[#E4E3E0] font-medium">{userProfile.fullName || userProfile.email}</p>
+                    <p className="text-[#666]">{userProfile.role === "pro" ? "Pro Member" : "Free Account"}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Loading placeholder - shows while fetching profile */
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium bg-[#1A1A1A] border border-[#2A2A2A] text-[#555]">
+                <Coins className="w-4 h-4 animate-pulse" />
+                <span className="animate-pulse">Loading...</span>
+              </div>
+              <div className="w-9 h-9 bg-[#1A1A1A] rounded-full animate-pulse border-2 border-[#2A2A2A]" />
+            </div>
+          )}
+          
+          <motion.button
+            whileHover={{ rotate: -180 }}
+            transition={{ duration: 0.3 }}
+            onClick={reset}
+            className="p-2.5 hover:bg-[#1A1A1A] rounded-full transition-colors text-[#444] hover:text-[#F27D26]"
+          >
+            <RotateCcw className="w-5 h-5" />
+          </motion.button>
+        </div>
       </header>
+
+      {/* Error Toast */}
+      <AnimatePresence>
+        {errorMessage && !showUpgradeModal && (
+          <motion.div
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-red-500/90 text-white px-4 py-3 rounded-xl flex items-center gap-3 shadow-lg"
+          >
+            <AlertCircle className="w-5 h-5" />
+            <span className="text-sm font-medium">{errorMessage}</span>
+            <button onClick={() => setErrorMessage(null)} className="p-1 hover:bg-white/20 rounded">
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Upgrade Modal */}
+      <AnimatePresence>
+        {showUpgradeModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowUpgradeModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#0A0A0A] border border-[#1A1A1A] rounded-2xl p-8 max-w-md w-full shadow-2xl"
+            >
+              <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-[#F27D26]/10 border border-[#F27D26]/30 flex items-center justify-center">
+                <Crown className="w-8 h-8 text-[#F27D26]" />
+              </div>
+              
+              <h2 className="text-2xl font-black uppercase tracking-tighter italic text-center mb-2">
+                Nang Cap Pro
+              </h2>
+              
+              <p className="text-sm text-[#666] text-center mb-6">
+                {errorMessage || "Ban da het luot mien phi. Nang cap len Pro de su dung khong gioi han!"}
+              </p>
+              
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center gap-3 text-sm text-[#888]">
+                  <div className="w-5 h-5 rounded-full bg-[#F27D26]/20 flex items-center justify-center">
+                    <span className="text-[#F27D26] text-xs">✓</span>
+                  </div>
+                  <span>Khong gioi han so luot tao prompt</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-[#888]">
+                  <div className="w-5 h-5 rounded-full bg-[#F27D26]/20 flex items-center justify-center">
+                    <span className="text-[#F27D26] text-xs">✓</span>
+                  </div>
+                  <span>Uu tien xu ly nhanh hon</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-[#888]">
+                  <div className="w-5 h-5 rounded-full bg-[#F27D26]/20 flex items-center justify-center">
+                    <span className="text-[#F27D26] text-xs">✓</span>
+                  </div>
+                  <span>Ho tro ky thuat 24/7</span>
+                </div>
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowUpgradeModal(false)}
+                  className="flex-1 py-3 px-4 rounded-xl border border-[#2A2A2A] text-[#888] hover:bg-[#1A1A1A] transition-colors font-medium"
+                >
+                  De sau
+                </button>
+                <a
+                  href="/upgrade"
+                  className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-[#F27D26] to-yellow-500 text-white font-bold text-center hover:opacity-90 transition-opacity"
+                >
+                  Nang cap ngay
+                </a>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <main className="max-w-[1800px] mx-auto p-4 md:p-6">
         <AnimatePresence mode="wait">

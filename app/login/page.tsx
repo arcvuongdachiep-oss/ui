@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
@@ -8,6 +9,25 @@ import { createClient } from "@/lib/supabase/client";
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const router = useRouter();
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkUser = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log("[v0] Login page - Checking existing user:", user?.email);
+      
+      if (user) {
+        console.log("[v0] Login page - User already logged in, redirecting to home");
+        router.push("/");
+        return;
+      }
+      setCheckingAuth(false);
+    };
+    checkUser();
+  }, [router]);
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
@@ -15,22 +35,38 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient();
+      
+      // Use current origin for redirect (works in both dev and prod)
+      const redirectUrl = `${window.location.origin}/auth/callback`;
+      console.log("[v0] Login - Redirect URL:", redirectUrl);
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: "https://hiepd5.com/auth/callback",
+          redirectTo: redirectUrl,
         },
       });
 
       if (error) {
+        console.log("[v0] Login - OAuth error:", error);
         setError(error.message);
         setIsLoading(false);
       }
-    } catch {
+    } catch (err) {
+      console.log("[v0] Login - Exception:", err);
       setError("Đã xảy ra lỗi không mong muốn");
       setIsLoading(false);
     }
   };
+
+  // Show loading while checking auth
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-[#F27D26] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#050505] text-[#E4E3E0] font-sans flex flex-col">

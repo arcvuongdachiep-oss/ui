@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 // Initialize Gemini API
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
@@ -59,6 +60,18 @@ const MODES: ModeConfig[] = [
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = await createClient();
+    
+    // Verify user authentication
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: "Vui lòng đăng nhập để sử dụng tính năng này" },
+        { status: 401 }
+      );
+    }
+
     const { baseImages, refImage, mode } = await request.json();
 
     if (!baseImages || baseImages.length === 0 || !refImage || !mode) {
@@ -66,6 +79,33 @@ export async function POST(request: NextRequest) {
         { error: "Missing required fields" },
         { status: 400 }
       );
+    }
+
+    const imageCount = baseImages.length;
+
+    // Get user profile to check credits
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("credits, role")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError || !profile) {
+      return NextResponse.json(
+        { error: "Không tìm thấy thông tin người dùng" },
+        { status: 404 }
+      );
+    }
+
+    // Check credits (Pro users have unlimited)
+    const isPro = profile.role === "pro";
+    if (!isPro && profile.credits < imageCount) {
+      return NextResponse.json({
+        error: `Bạn cần ${imageCount} lượt để thực hiện, nhưng chỉ còn ${profile.credits} lượt. Vui lòng nâng cấp Pro.`,
+        needUpgrade: true,
+        required: imageCount,
+        available: profile.credits,
+      }, { status: 400 });
     }
 
     const model = "gemini-2.5-flash";
@@ -130,7 +170,27 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({ results: allResults });
+    // Deduct credits after successful generation (if not Pro)
+    let remainingCredits = profile.credits;
+    if (!isPro) {
+      const { data: deductResult, error: deductError } = await supabase.rpc("deduct_credits", {
+        p_user_id: user.id,
+        p_amount: imageCount,
+      });
+
+      if (deductError) {
+        console.error("Error deducting credits:", deductError);
+      } else {
+        remainingCredits = deductResult?.[0]?.remaining_credits ?? (profile.credits - imageCount);
+      }
+    }
+
+    return NextResponse.json({ 
+      results: allResults,
+      creditsUsed: isPro ? 0 : imageCount,
+      remainingCredits: isPro ? -1 : remainingCredits,
+      isPro,
+    });
   } catch (error) {
     console.error("Error generating prompts:", error);
     return NextResponse.json(
