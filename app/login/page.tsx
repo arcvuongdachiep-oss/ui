@@ -17,10 +17,8 @@ export default function LoginPage() {
     const checkUser = async () => {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      console.log("[v0] Login page - Checking existing user:", user?.email);
       
       if (user) {
-        console.log("[v0] Login page - User already logged in, redirecting to home");
         router.push("/");
         return;
       }
@@ -38,7 +36,6 @@ export default function LoginPage() {
       
       // Use current origin for redirect (works in both dev and prod)
       const redirectUrl = `${window.location.origin}/auth/callback`;
-      console.log("[v0] Login - Redirect URL:", redirectUrl);
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -48,12 +45,10 @@ export default function LoginPage() {
       });
 
       if (error) {
-        console.log("[v0] Login - OAuth error:", error);
         setError(error.message);
         setIsLoading(false);
       }
-    } catch (err) {
-      console.log("[v0] Login - Exception:", err);
+    } catch {
       setError("Đã xảy ra lỗi không mong muốn");
       setIsLoading(false);
     }

@@ -2,10 +2,7 @@ import { updateSession } from '@/lib/supabase/proxy'
 import { type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  console.log("[v0] Middleware - Path:", request.nextUrl.pathname);
-  const response = await updateSession(request);
-  console.log("[v0] Middleware - Response status:", response.status);
-  return response;
+  return await updateSession(request);
 }
 
 export const config = {

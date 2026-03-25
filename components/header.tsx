@@ -31,16 +31,11 @@ export function Header() {
     const supabase = createClient();
     
     const fetchProfile = async (userId: string, userEmail?: string, userMetadata?: Record<string, unknown>) => {
-      console.log("[v0] Header - Fetching profile for user:", userId);
-      
       const { data: profile, error } = await supabase
         .from("profiles")
         .select("credits, role, email, full_name, avatar_url")
         .eq("id", userId)
         .single();
-
-      console.log("[v0] Header - Profile data:", profile);
-      console.log("[v0] Header - Profile error:", error);
 
       if (profile) {
         setUserProfile({
@@ -66,12 +61,8 @@ export function Header() {
     };
 
     const initializeAuth = async () => {
-      console.log("[v0] Header - Initializing auth...");
-      
       // Use getUser() instead of getSession() for more reliable auth check
-      const { data: { user: currentUser }, error } = await supabase.auth.getUser();
-      
-      console.log("[v0] Header - getUser result:", currentUser?.email || "none", "Error:", error?.message || "none");
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
       
       if (currentUser) {
         setUser(currentUser);
@@ -86,8 +77,6 @@ export function Header() {
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log("[v0] Header - Auth event:", event);
-        
         if (event === "SIGNED_IN" && session?.user) {
           setUser(session.user);
           await fetchProfile(session.user.id, session.user.email, session.user.user_metadata);

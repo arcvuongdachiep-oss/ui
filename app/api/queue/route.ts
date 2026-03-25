@@ -27,8 +27,7 @@ export async function GET() {
         windowMinutes: QUEUE_CONFIG.RATE_LIMIT_WINDOW / 60,
       }
     });
-  } catch (error) {
-    console.error("Queue status error:", error);
+  } catch {
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
