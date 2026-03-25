@@ -72,8 +72,8 @@ export default function Home() {
           const data = await response.json();
           setUserProfile(data);
         }
-      } catch (error) {
-        console.error("Error fetching profile:", error);
+      } catch {
+        // Silent fail
       }
     };
     fetchProfile();
@@ -119,11 +119,9 @@ export default function Home() {
             const optimized = await optimizeImage(dataUrl);
             setBaseImages((prev) => [...prev, optimized.dataUrl]);
             setOptimizedBaseImages((prev) => [...prev, optimized]);
-          } catch (error) {
-            console.error("Failed to optimize image:", error);
-            // Fallback to original
-            setBaseImages((prev) => [...prev, dataUrl]);
-          }
+      } catch {
+        // Silent fail
+      }
         }
       };
       reader.readAsDataURL(file);
@@ -280,8 +278,7 @@ export default function Home() {
       // Start 1-minute cooldown after successful request
       startCooldown(60);
       
-    } catch (error) {
-      console.error("Error generating prompts:", error);
+    } catch {
       setErrorMessage("Co loi xay ra. Vui long thu lai.");
     } finally {
       setLoading(false);

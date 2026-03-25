@@ -11,6 +11,13 @@ import {
   getQueueStatus,
   QUEUE_CONFIG
 } from "@/lib/queue";
+import {
+  isAllowedOrigin,
+  withCorsHeaders,
+  blockedResponse,
+  sanitizeBase64Image,
+  validateModeId,
+} from "@/lib/security";
 
 // Validate API Key exists
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -71,8 +78,21 @@ const MODES: ModeConfig[] = [
   }
 ];
 
+// Handle CORS preflight
+export async function OPTIONS(request: NextRequest) {
+  if (!isAllowedOrigin(request)) {
+    return blockedResponse();
+  }
+  return withCorsHeaders(new NextResponse(null, { status: 200 }), request);
+}
+
 export async function POST(request: NextRequest) {
   try {
+    // CORS check
+    if (!isAllowedOrigin(request)) {
+      return blockedResponse();
+    }
+
     // Check if API Key is configured
     if (!genAI || !GEMINI_API_KEY) {
       return NextResponse.json(
@@ -148,16 +168,45 @@ export async function POST(request: NextRequest) {
     // Record this request for rate limiting
     recordRequest(user.id);
 
-    const { baseImages, refImage, mode } = await request.json();
+    const body = await request.json();
+    const { baseImages, refImage, mode } = body;
 
-    if (!baseImages || baseImages.length === 0 || !refImage || !mode) {
+    // Validate mode
+    if (!validateModeId(mode)) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Invalid mode" },
         { status: 400 }
       );
     }
 
-    const imageCount = baseImages.length;
+    // Validate and sanitize images
+    if (!Array.isArray(baseImages) || baseImages.length === 0 || baseImages.length > 4) {
+      return NextResponse.json(
+        { error: "Invalid base images (1-4 images required)" },
+        { status: 400 }
+      );
+    }
+
+    const sanitizedBaseImages = baseImages
+      .map(img => sanitizeBase64Image(img))
+      .filter((img): img is string => img !== null);
+
+    if (sanitizedBaseImages.length !== baseImages.length) {
+      return NextResponse.json(
+        { error: "Invalid image format detected" },
+        { status: 400 }
+      );
+    }
+
+    const sanitizedRefImage = sanitizeBase64Image(refImage);
+    if (!sanitizedRefImage) {
+      return NextResponse.json(
+        { error: "Invalid reference image" },
+        { status: 400 }
+      );
+    }
+
+    const imageCount = sanitizedBaseImages.length;
 
     // Get user profile to check credits
     const { data: profile, error: profileError } = await supabase
@@ -185,7 +234,7 @@ export async function POST(request: NextRequest) {
     }
 
     const model = "gemini-2.5-flash";
-    const base64Ref = refImage.split(',')[1];
+    const base64Ref = sanitizedRefImage.split(',')[1];
     const modeConfig = MODES.find(m => m.id === mode);
 
     if (!modeConfig) {
@@ -197,7 +246,7 @@ export async function POST(request: NextRequest) {
 
     const allResults = [];
 
-    for (const baseImg of baseImages) {
+    for (const baseImg of sanitizedBaseImages) {
       const base64Base = baseImg.split(',')[1];
 
       const systemInstruction = `
@@ -213,7 +262,7 @@ export async function POST(request: NextRequest) {
         }
       `;
 
-      console.log("[v0] Using model:", model, "Mode:", modeConfig.title);
+
       
       const geminiModel = genAI.getGenerativeModel({ 
         model: model,
@@ -230,7 +279,6 @@ export async function POST(request: NextRequest) {
       ]);
 
       const responseText = response.response.text();
-      console.log("[v0] Response received:", responseText?.substring(0, 100));
       
       let data;
       try {
@@ -254,9 +302,7 @@ export async function POST(request: NextRequest) {
         p_amount: imageCount,
       });
 
-      if (deductError) {
-        console.error("Error deducting credits:", deductError);
-      } else {
+      if (!deductError) {
         remainingCredits = deductResult?.[0]?.remaining_credits ?? (profile.credits - imageCount);
       }
     }
@@ -264,12 +310,12 @@ export async function POST(request: NextRequest) {
     // Finish processing
     finishProcessing(user.id);
 
-    return NextResponse.json({ 
+    return withCorsHeaders(NextResponse.json({ 
       results: allResults,
       creditsUsed: isPro ? 0 : imageCount,
       remainingCredits: isPro ? -1 : remainingCredits,
       isPro,
-    });
+    }), request);
   } catch (error) {
     // Make sure to finish processing on error too
     try {
@@ -282,7 +328,6 @@ export async function POST(request: NextRequest) {
       // Ignore cleanup errors
     }
     
-    console.error("Error generating prompts:", error);
     return NextResponse.json(
       { error: "Failed to generate prompts" },
       { status: 500 }

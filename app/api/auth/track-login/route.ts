@@ -25,7 +25,6 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-      console.error("Error tracking IP:", error);
       return NextResponse.json({ error: "Failed to track login" }, { status: 500 });
     }
 
@@ -51,8 +50,7 @@ export async function POST(request: Request) {
       login_count: result?.login_count,
       unique_emails_from_ip: result?.unique_emails_from_ip,
     });
-  } catch (error) {
-    console.error("Track login error:", error);
+  } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
