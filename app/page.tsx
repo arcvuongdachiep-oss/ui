@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Coins, Crown, AlertCircle, X } from "lucide-react";
 import Image from "next/image";
 import type { ModeId, PromptResult } from "@/lib/types";
 import { ModeSelector, MODES } from "@/components/mode-selector";
@@ -16,6 +16,12 @@ import {
   type TokenEstimate 
 } from "@/lib/image-optimizer";
 
+interface UserCredits {
+  credits: number;
+  role: string;
+  isPro: boolean;
+}
+
 export default function Home() {
   const [selectedMode, setSelectedMode] = useState<ModeId | null>(null);
   const [baseImages, setBaseImages] = useState<string[]>([]);
@@ -28,6 +34,25 @@ export default function Home() {
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [tokenEstimate, setTokenEstimate] = useState<TokenEstimate | null>(null);
   const [savings, setSavings] = useState(0);
+  const [userCredits, setUserCredits] = useState<UserCredits | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  // Fetch user credits on mount
+  useEffect(() => {
+    const fetchCredits = async () => {
+      try {
+        const response = await fetch("/api/credits");
+        if (response.ok) {
+          const data = await response.json();
+          setUserCredits(data);
+        }
+      } catch (error) {
+        console.error("Error fetching credits:", error);
+      }
+    };
+    fetchCredits();
+  }, []);
 
   // Calculate token estimate when images change
   useEffect(() => {
@@ -119,8 +144,18 @@ export default function Home() {
   const generatePrompts = async () => {
     if (!selectedMode || optimizedBaseImages.length === 0 || !optimizedRefImage) return;
 
+    const imageCount = optimizedBaseImages.length;
+
+    // Check credits before generating (for non-Pro users)
+    if (userCredits && !userCredits.isPro && userCredits.credits < imageCount) {
+      setErrorMessage(`Ban can ${imageCount} luot de thuc hien, nhung chi con ${userCredits.credits} luot. Vui long nang cap Pro.`);
+      setShowUpgradeModal(true);
+      return;
+    }
+
     setLoading(true);
     setResults([]);
+    setErrorMessage(null);
 
     try {
       // Send optimized images (already compressed base64)
@@ -138,14 +173,30 @@ export default function Home() {
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error("Failed to generate prompts");
+        if (data.needUpgrade) {
+          setErrorMessage(data.error);
+          setShowUpgradeModal(true);
+        } else {
+          setErrorMessage(data.error || "Co loi xay ra khi tao prompt");
+        }
+        return;
       }
 
-      const data = await response.json();
       setResults(data.results);
+      
+      // Update local credits after successful generation
+      if (data.remainingCredits !== undefined && data.remainingCredits >= 0) {
+        setUserCredits(prev => prev ? {
+          ...prev,
+          credits: data.remainingCredits,
+        } : null);
+      }
     } catch (error) {
       console.error("Error generating prompts:", error);
+      setErrorMessage("Co loi xay ra. Vui long thu lai.");
     } finally {
       setLoading(false);
     }
@@ -196,15 +247,125 @@ export default function Home() {
             </p>
           </div>
         </div>
-        <motion.button
-          whileHover={{ rotate: -180 }}
-          transition={{ duration: 0.3 }}
-          onClick={reset}
-          className="p-2.5 hover:bg-[#1A1A1A] rounded-full transition-colors text-[#444] hover:text-[#F27D26]"
-        >
-          <RotateCcw className="w-5 h-5" />
-        </motion.button>
+        <div className="flex items-center gap-3">
+          {/* Credits Display */}
+          {userCredits && (
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
+              userCredits.isPro 
+                ? "bg-gradient-to-r from-[#F27D26]/20 to-yellow-500/20 border border-[#F27D26]/30 text-[#F27D26]" 
+                : "bg-[#1A1A1A] border border-[#2A2A2A] text-[#888]"
+            }`}>
+              {userCredits.isPro ? (
+                <>
+                  <Crown className="w-4 h-4 text-[#F27D26]" />
+                  <span className="text-[#F27D26]">PRO</span>
+                </>
+              ) : (
+                <>
+                  <Coins className="w-4 h-4" />
+                  <span>{userCredits.credits} luot</span>
+                </>
+              )}
+            </div>
+          )}
+          
+          <motion.button
+            whileHover={{ rotate: -180 }}
+            transition={{ duration: 0.3 }}
+            onClick={reset}
+            className="p-2.5 hover:bg-[#1A1A1A] rounded-full transition-colors text-[#444] hover:text-[#F27D26]"
+          >
+            <RotateCcw className="w-5 h-5" />
+          </motion.button>
+        </div>
       </header>
+
+      {/* Error Toast */}
+      <AnimatePresence>
+        {errorMessage && !showUpgradeModal && (
+          <motion.div
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-red-500/90 text-white px-4 py-3 rounded-xl flex items-center gap-3 shadow-lg"
+          >
+            <AlertCircle className="w-5 h-5" />
+            <span className="text-sm font-medium">{errorMessage}</span>
+            <button onClick={() => setErrorMessage(null)} className="p-1 hover:bg-white/20 rounded">
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Upgrade Modal */}
+      <AnimatePresence>
+        {showUpgradeModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowUpgradeModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#0A0A0A] border border-[#1A1A1A] rounded-2xl p-8 max-w-md w-full shadow-2xl"
+            >
+              <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-[#F27D26]/10 border border-[#F27D26]/30 flex items-center justify-center">
+                <Crown className="w-8 h-8 text-[#F27D26]" />
+              </div>
+              
+              <h2 className="text-2xl font-black uppercase tracking-tighter italic text-center mb-2">
+                Nang Cap Pro
+              </h2>
+              
+              <p className="text-sm text-[#666] text-center mb-6">
+                {errorMessage || "Ban da het luot mien phi. Nang cap len Pro de su dung khong gioi han!"}
+              </p>
+              
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center gap-3 text-sm text-[#888]">
+                  <div className="w-5 h-5 rounded-full bg-[#F27D26]/20 flex items-center justify-center">
+                    <span className="text-[#F27D26] text-xs">✓</span>
+                  </div>
+                  <span>Khong gioi han so luot tao prompt</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-[#888]">
+                  <div className="w-5 h-5 rounded-full bg-[#F27D26]/20 flex items-center justify-center">
+                    <span className="text-[#F27D26] text-xs">✓</span>
+                  </div>
+                  <span>Uu tien xu ly nhanh hon</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-[#888]">
+                  <div className="w-5 h-5 rounded-full bg-[#F27D26]/20 flex items-center justify-center">
+                    <span className="text-[#F27D26] text-xs">✓</span>
+                  </div>
+                  <span>Ho tro ky thuat 24/7</span>
+                </div>
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowUpgradeModal(false)}
+                  className="flex-1 py-3 px-4 rounded-xl border border-[#2A2A2A] text-[#888] hover:bg-[#1A1A1A] transition-colors font-medium"
+                >
+                  De sau
+                </button>
+                <a
+                  href="/upgrade"
+                  className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-[#F27D26] to-yellow-500 text-white font-bold text-center hover:opacity-90 transition-opacity"
+                >
+                  Nang cap ngay
+                </a>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <main className="max-w-[1800px] mx-auto p-4 md:p-6">
         <AnimatePresence mode="wait">
