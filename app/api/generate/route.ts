@@ -1,6 +1,16 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { 
+  checkRateLimit, 
+  recordRequest, 
+  addToQueue, 
+  canStartProcessing, 
+  startProcessing, 
+  finishProcessing,
+  getQueueStatus,
+  QUEUE_CONFIG
+} from "@/lib/queue";
 
 // Validate API Key exists
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -82,6 +92,61 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    // Check rate limit (2 requests per 3 minutes)
+    const rateLimit = checkRateLimit(user.id);
+    if (!rateLimit.allowed) {
+      return NextResponse.json({
+        error: `Bạn đã đạt giới hạn ${QUEUE_CONFIG.RATE_LIMIT_MAX} lượt trong ${QUEUE_CONFIG.RATE_LIMIT_WINDOW / 60} phút. Vui lòng đợi ${rateLimit.resetIn} giây.`,
+        rateLimited: true,
+        resetIn: rateLimit.resetIn,
+      }, { status: 429 });
+    }
+
+    // Check queue status
+    const queueStatus = getQueueStatus();
+    if (queueStatus.queueLength >= QUEUE_CONFIG.MAX_QUEUE_SIZE) {
+      return NextResponse.json({
+        error: "Máy chủ đang quá tải, vui lòng quay lại sau vài phút.",
+        serverBusy: true,
+        queueLength: queueStatus.queueLength,
+      }, { status: 503 });
+    }
+
+    // Add to queue
+    const queueResult = addToQueue(user.id);
+    if (!queueResult.success) {
+      return NextResponse.json({
+        error: "Máy chủ đang quá tải, vui lòng quay lại sau vài phút.",
+        serverBusy: true,
+      }, { status: 503 });
+    }
+
+    // Wait for turn to process
+    let waitAttempts = 0;
+    const maxWaitAttempts = 30; // 30 seconds max wait
+    while (!canStartProcessing(user.id) && waitAttempts < maxWaitAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      waitAttempts++;
+    }
+
+    if (!canStartProcessing(user.id)) {
+      finishProcessing(user.id);
+      return NextResponse.json({
+        error: "Hết thời gian chờ trong hàng đợi. Vui lòng thử lại.",
+        timeout: true,
+      }, { status: 408 });
+    }
+
+    // Start processing
+    if (!startProcessing(user.id)) {
+      return NextResponse.json({
+        error: "Không thể bắt đầu xử lý. Vui lòng thử lại.",
+      }, { status: 500 });
+    }
+
+    // Record this request for rate limiting
+    recordRequest(user.id);
 
     const { baseImages, refImage, mode } = await request.json();
 
@@ -196,6 +261,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Finish processing
+    finishProcessing(user.id);
+
     return NextResponse.json({ 
       results: allResults,
       creditsUsed: isPro ? 0 : imageCount,
@@ -203,6 +271,17 @@ export async function POST(request: NextRequest) {
       isPro,
     });
   } catch (error) {
+    // Make sure to finish processing on error too
+    try {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        finishProcessing(user.id);
+      }
+    } catch {
+      // Ignore cleanup errors
+    }
+    
     console.error("Error generating prompts:", error);
     return NextResponse.json(
       { error: "Failed to generate prompts" },

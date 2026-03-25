@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { RotateCcw, Zap, Crown, AlertCircle, X, LogOut, ChevronDown } from "lucide-react";
+import { RotateCcw, Zap, Crown, AlertCircle, X, LogOut, ChevronDown, Clock, Loader2 } from "lucide-react";
 import Image from "next/image";
 import type { ModeId, PromptResult } from "@/lib/types";
 import { ModeSelector, MODES } from "@/components/mode-selector";
@@ -25,6 +25,13 @@ interface UserProfile {
   avatarUrl?: string;
 }
 
+interface QueueStatus {
+  position: number;
+  estimatedWait: number;
+  rateLimitRemaining: number;
+  rateLimitResetIn: number;
+}
+
 export default function Home() {
   const [selectedMode, setSelectedMode] = useState<ModeId | null>(null);
   const [baseImages, setBaseImages] = useState<string[]>([]);
@@ -40,27 +47,33 @@ export default function Home() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [queueStatus, setQueueStatus] = useState<QueueStatus | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [statusMessage, setStatusMessage] = useState<string>("");
+  const [isButtonDisabled, setIsButtonDisabled] = useState(false);
+  const [cooldownTime, setCooldownTime] = useState(0);
+  const cooldownRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup cooldown timer
+  useEffect(() => {
+    return () => {
+      if (cooldownRef.current) {
+        clearInterval(cooldownRef.current);
+      }
+    };
+  }, []);
 
   // Fetch user profile on mount
   useEffect(() => {
-    console.log("[v0] useEffect triggered - fetching profile...");
     const fetchProfile = async () => {
       try {
-        console.log("[v0] Fetching user profile from /api/credits...");
         const response = await fetch("/api/credits");
-        console.log("[v0] Profile response status:", response.status);
-        
         if (response.ok) {
           const data = await response.json();
-          console.log("[v0] User Credits:", data.credits, "Role:", data.role);
-          console.log("[v0] Full profile data:", JSON.stringify(data));
           setUserProfile(data);
-        } else {
-          const errorData = await response.json();
-          console.log("[v0] Profile fetch error:", JSON.stringify(errorData));
         }
       } catch (error) {
-        console.error("[v0] Error fetching profile:", error);
+        console.error("Error fetching profile:", error);
       }
     };
     fetchProfile();
@@ -153,6 +166,27 @@ export default function Home() {
     setOptimizedRefImage(null);
   };
 
+  // Start cooldown timer
+  const startCooldown = (seconds: number) => {
+    setCooldownTime(seconds);
+    setIsButtonDisabled(true);
+    
+    if (cooldownRef.current) {
+      clearInterval(cooldownRef.current);
+    }
+    
+    cooldownRef.current = setInterval(() => {
+      setCooldownTime(prev => {
+        if (prev <= 1) {
+          clearInterval(cooldownRef.current!);
+          setIsButtonDisabled(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
   const generatePrompts = async () => {
     if (!selectedMode || optimizedBaseImages.length === 0 || !optimizedRefImage) return;
 
@@ -165,11 +199,25 @@ export default function Home() {
       return;
     }
 
+    // Disable button immediately
+    setIsButtonDisabled(true);
     setLoading(true);
     setResults([]);
     setErrorMessage(null);
+    setProgress(0);
+    setStatusMessage("Dang ket noi...");
 
     try {
+      // Progress simulation
+      const progressInterval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 90) return prev;
+          return prev + Math.random() * 15;
+        });
+      }, 500);
+
+      setStatusMessage("Dang phan tich hinh anh...");
+      
       // Send optimized images (already compressed base64)
       const optimizedBaseDataUrls = optimizedBaseImages.map(img => img.dataUrl);
       
@@ -185,9 +233,29 @@ export default function Home() {
         }),
       });
 
+      clearInterval(progressInterval);
       const data = await response.json();
 
       if (!response.ok) {
+        // Handle rate limit
+        if (data.rateLimited) {
+          setErrorMessage(data.error);
+          startCooldown(data.resetIn || 180);
+          return;
+        }
+        
+        // Handle server busy
+        if (data.serverBusy) {
+          setErrorMessage(data.error);
+          setQueueStatus({
+            position: data.queueLength || 0,
+            estimatedWait: (data.queueLength || 0) * 30,
+            rateLimitRemaining: 0,
+            rateLimitResetIn: 0,
+          });
+          return;
+        }
+
         if (data.needUpgrade) {
           setErrorMessage(data.error);
           setShowUpgradeModal(true);
@@ -197,6 +265,8 @@ export default function Home() {
         return;
       }
 
+      setProgress(100);
+      setStatusMessage("Hoan thanh!");
       setResults(data.results);
       
       // Update local credits after successful generation
@@ -206,11 +276,17 @@ export default function Home() {
           credits: data.remainingCredits,
         } : null);
       }
+
+      // Start 3-minute cooldown after successful request
+      startCooldown(180);
+      
     } catch (error) {
       console.error("Error generating prompts:", error);
       setErrorMessage("Co loi xay ra. Vui long thu lai.");
     } finally {
       setLoading(false);
+      setStatusMessage("");
+      setTimeout(() => setProgress(0), 1000);
     }
   };
 
@@ -495,6 +571,10 @@ export default function Home() {
                   isOptimizing={isOptimizing}
                   tokenEstimate={tokenEstimate}
                   savings={savings}
+                  progress={progress}
+                  statusMessage={statusMessage}
+                  isButtonDisabled={isButtonDisabled}
+                  cooldownTime={cooldownTime}
                   onBack={() => setSelectedMode(null)}
                   onBaseUpload={handleBaseUpload}
                   onRefUpload={handleRefUpload}
