@@ -11,6 +11,7 @@ import {
   Loader2,
   ArrowLeft,
   Zap,
+  Clock,
 } from "lucide-react";
 import type { ModeId, ModeConfig } from "@/lib/types";
 import type { TokenEstimate } from "@/lib/image-optimizer";
@@ -25,6 +26,10 @@ interface ImageUploaderProps {
   isOptimizing: boolean;
   tokenEstimate: TokenEstimate | null;
   savings: number;
+  progress?: number;
+  statusMessage?: string;
+  isButtonDisabled?: boolean;
+  cooldownTime?: number;
   onBack: () => void;
   onBaseUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRefUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -42,6 +47,10 @@ export function ImageUploader({
   isOptimizing,
   tokenEstimate,
   savings,
+  progress = 0,
+  statusMessage = "",
+  isButtonDisabled = false,
+  cooldownTime = 0,
   onBack,
   onBaseUpload,
   onRefUpload,
@@ -226,38 +235,71 @@ export function ImageUploader({
           </div>
         </div>
 
-        {/* Generate Button */}
-        <div className="space-y-2">
+        {/* Generate Button with Progress */}
+        <div className="space-y-3">
+          {/* Progress Bar */}
+          {loading && progress > 0 && (
+            <div className="space-y-2">
+              <div className="h-1.5 bg-[#1A1A1A] rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-[#F27D26] to-yellow-500"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.3 }}
+                />
+              </div>
+              {statusMessage && (
+                <p className="text-[10px] text-[#666] text-center">{statusMessage}</p>
+              )}
+            </div>
+          )}
+
           <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            whileHover={!isButtonDisabled && !loading ? { scale: 1.02 } : {}}
+            whileTap={!isButtonDisabled && !loading ? { scale: 0.98 } : {}}
             onClick={onGenerate}
-            disabled={baseImages.length === 0 || !refImage || loading || isOptimizing}
-            className={`w-full py-4 rounded-xl font-black uppercase tracking-[0.15em] md:tracking-[0.2em] text-[11px] md:text-[12px] flex items-center justify-center gap-3 transition-all ${
-              baseImages.length === 0 || !refImage || loading || isOptimizing
+            disabled={baseImages.length === 0 || !refImage || loading || isOptimizing || isButtonDisabled}
+            className={`w-full py-4 rounded-xl font-black uppercase tracking-[0.15em] md:tracking-[0.2em] text-[11px] md:text-[12px] flex items-center justify-center gap-3 transition-all relative overflow-hidden ${
+              baseImages.length === 0 || !refImage || loading || isOptimizing || isButtonDisabled
                 ? "bg-[#111] text-[#333] cursor-not-allowed"
                 : "bg-[#F27D26] text-black hover:bg-[#FF8C37] shadow-[0_0_30px_rgba(242,125,38,0.3)]"
             }`}
           >
             {loading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
+            ) : cooldownTime > 0 ? (
+              <Clock className="w-5 h-5" />
             ) : (
               <Sparkles className="w-5 h-5" />
             )}
-            {loading ? "Generating..." : "Generate Prompt"}
+            {loading ? (
+              statusMessage || "Generating..."
+            ) : cooldownTime > 0 ? (
+              `Doi ${Math.floor(cooldownTime / 60)}:${String(cooldownTime % 60).padStart(2, '0')}`
+            ) : (
+              "Generate Prompt"
+            )}
           </motion.button>
           
-          {/* Credit Cost Display */}
-          {baseImages.length > 0 && (
-            <div className="flex items-center justify-center gap-1.5 text-[10px] text-[#666]">
-              <span>Cost:</span>
-              <div className="flex items-center gap-0.5 text-yellow-400 font-semibold">
-                <Zap className="w-3 h-3 fill-yellow-400" />
-                <span>{baseImages.length}</span>
+          {/* Credit Cost & Rate Limit Info */}
+          <div className="flex items-center justify-center gap-3 text-[10px] text-[#666]">
+            {baseImages.length > 0 && !cooldownTime && (
+              <div className="flex items-center gap-1.5">
+                <span>Cost:</span>
+                <div className="flex items-center gap-0.5 text-yellow-400 font-semibold">
+                  <Zap className="w-3 h-3 fill-yellow-400" />
+                  <span>{baseImages.length}</span>
+                </div>
+                <span>credit{baseImages.length > 1 ? "s" : ""}</span>
               </div>
-              <span>credit{baseImages.length > 1 ? "s" : ""}</span>
-            </div>
-          )}
+            )}
+            {cooldownTime > 0 && (
+              <div className="flex items-center gap-1 text-[#888]">
+                <Clock className="w-3 h-3" />
+                <span>Rate limit: 2 luot / 3 phut</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Token Estimate Display */}
