@@ -10,6 +10,7 @@ import {
   Sparkles,
   Loader2,
   ArrowLeft,
+  Zap,
 } from "lucide-react";
 import type { ModeId, ModeConfig } from "@/lib/types";
 import type { TokenEstimate } from "@/lib/image-optimizer";
@@ -226,24 +227,38 @@ export function ImageUploader({
         </div>
 
         {/* Generate Button */}
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={onGenerate}
-          disabled={baseImages.length === 0 || !refImage || loading || isOptimizing}
-          className={`w-full py-4 rounded-xl font-black uppercase tracking-[0.15em] md:tracking-[0.2em] text-[11px] md:text-[12px] flex items-center justify-center gap-3 transition-all ${
-            baseImages.length === 0 || !refImage || loading || isOptimizing
-              ? "bg-[#111] text-[#333] cursor-not-allowed"
-              : "bg-[#F27D26] text-black hover:bg-[#FF8C37] shadow-[0_0_30px_rgba(242,125,38,0.3)]"
-          }`}
-        >
-          {loading ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <Sparkles className="w-5 h-5" />
+        <div className="space-y-2">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onGenerate}
+            disabled={baseImages.length === 0 || !refImage || loading || isOptimizing}
+            className={`w-full py-4 rounded-xl font-black uppercase tracking-[0.15em] md:tracking-[0.2em] text-[11px] md:text-[12px] flex items-center justify-center gap-3 transition-all ${
+              baseImages.length === 0 || !refImage || loading || isOptimizing
+                ? "bg-[#111] text-[#333] cursor-not-allowed"
+                : "bg-[#F27D26] text-black hover:bg-[#FF8C37] shadow-[0_0_30px_rgba(242,125,38,0.3)]"
+            }`}
+          >
+            {loading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Sparkles className="w-5 h-5" />
+            )}
+            {loading ? "Generating..." : "Generate Prompt"}
+          </motion.button>
+          
+          {/* Credit Cost Display */}
+          {baseImages.length > 0 && (
+            <div className="flex items-center justify-center gap-1.5 text-[10px] text-[#666]">
+              <span>Cost:</span>
+              <div className="flex items-center gap-0.5 text-yellow-400 font-semibold">
+                <Zap className="w-3 h-3 fill-yellow-400" />
+                <span>{baseImages.length}</span>
+              </div>
+              <span>credit{baseImages.length > 1 ? "s" : ""}</span>
+            </div>
           )}
-          {loading ? "Generating..." : "Generate Prompt"}
-        </motion.button>
+        </div>
 
         {/* Token Estimate Display */}
         <TokenDisplay 

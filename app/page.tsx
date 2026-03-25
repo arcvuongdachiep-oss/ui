@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { RotateCcw, Coins, Crown, AlertCircle, X } from "lucide-react";
+import { RotateCcw, Zap, Crown, AlertCircle, X, LogOut, ChevronDown } from "lucide-react";
 import Image from "next/image";
 import type { ModeId, PromptResult } from "@/lib/types";
 import { ModeSelector, MODES } from "@/components/mode-selector";
@@ -262,12 +262,12 @@ export default function Home() {
         <div className="flex items-center gap-3">
           {/* User Profile & Credits Display */}
           {userProfile ? (
-            <div className="flex items-center gap-3">
-              {/* Credits Badge */}
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
+            <div className="flex items-center gap-2">
+              {/* Credits Badge with Lightning Icon */}
+              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold ${
                 userProfile.isPro 
                   ? "bg-gradient-to-r from-[#F27D26]/20 to-yellow-500/20 border border-[#F27D26]/30 text-[#F27D26]" 
-                  : "bg-[#1A1A1A] border border-[#2A2A2A] text-[#888]"
+                  : "bg-[#1A1A1A]/80 backdrop-blur-sm border border-[#2A2A2A] text-yellow-400"
               }`}>
                 {userProfile.isPro ? (
                   <>
@@ -276,46 +276,102 @@ export default function Home() {
                   </>
                 ) : (
                   <>
-                    <Coins className="w-4 h-4" />
-                    <span>{userProfile.credits} luot</span>
+                    <Zap className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                    <span>{userProfile.credits}</span>
                   </>
                 )}
               </div>
               
-              {/* User Avatar */}
+              {/* User Avatar with Dropdown Menu */}
               <div className="relative group">
-                <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-[#2A2A2A] hover:border-[#F27D26] transition-colors cursor-pointer">
-                  {userProfile.avatarUrl ? (
-                    <Image
-                      src={userProfile.avatarUrl}
-                      alt={userProfile.fullName || "User"}
-                      width={36}
-                      height={36}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-[#1A1A1A] flex items-center justify-center text-[#666] text-sm font-bold">
-                      {userProfile.email?.charAt(0).toUpperCase() || "U"}
+                <button className="flex items-center gap-1.5 p-1 rounded-full hover:bg-[#1A1A1A] transition-colors">
+                  <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-[#2A2A2A] group-hover:border-[#F27D26] transition-colors">
+                    {userProfile.avatarUrl ? (
+                      <Image
+                        src={userProfile.avatarUrl}
+                        alt={userProfile.fullName || "User"}
+                        width={32}
+                        height={32}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-[#1A1A1A] flex items-center justify-center text-[#666] text-xs font-bold">
+                        {userProfile.email?.charAt(0).toUpperCase() || "U"}
+                      </div>
+                    )}
+                  </div>
+                  <ChevronDown className="w-3 h-3 text-[#666] group-hover:text-[#888] transition-colors" />
+                </button>
+                
+                {/* Dropdown Menu */}
+                <div className="absolute right-0 top-full mt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                  <div className="bg-[#0A0A0A]/95 backdrop-blur-xl border border-[#1A1A1A] rounded-xl shadow-2xl overflow-hidden min-w-[200px]">
+                    {/* User Info */}
+                    <div className="px-4 py-3 border-b border-[#1A1A1A]">
+                      <p className="text-sm font-medium text-[#E4E3E0] truncate">{userProfile.fullName || userProfile.email}</p>
+                      <p className="text-xs text-[#666] truncate">{userProfile.email}</p>
+                      <div className="mt-2 flex items-center gap-1.5">
+                        <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full ${
+                          userProfile.isPro 
+                            ? "bg-[#F27D26]/20 text-[#F27D26]" 
+                            : "bg-[#1A1A1A] text-[#666]"
+                        }`}>
+                          {userProfile.isPro ? "Pro Member" : "Free Account"}
+                        </span>
+                      </div>
                     </div>
-                  )}
-                </div>
-                {/* Tooltip */}
-                <div className="absolute right-0 top-full mt-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
-                  <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg px-3 py-2 text-xs whitespace-nowrap shadow-lg">
-                    <p className="text-[#E4E3E0] font-medium">{userProfile.fullName || userProfile.email}</p>
-                    <p className="text-[#666]">{userProfile.role === "pro" ? "Pro Member" : "Free Account"}</p>
+                    
+                    {/* Credits Info */}
+                    {!userProfile.isPro && (
+                      <div className="px-4 py-3 border-b border-[#1A1A1A] bg-[#0A0A0A]/50">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-[#666]">Credits</span>
+                          <div className="flex items-center gap-1">
+                            <Zap className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                            <span className="text-sm font-bold text-yellow-400">{userProfile.credits}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Menu Items */}
+                    <div className="py-1">
+                      {!userProfile.isPro && (
+                        <a
+                          href="/upgrade"
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#888] hover:text-[#F27D26] hover:bg-[#F27D26]/5 transition-colors"
+                        >
+                          <Crown className="w-4 h-4" />
+                          <span>Nang cap Pro</span>
+                        </a>
+                      )}
+                      <button
+                        onClick={async () => {
+                          try {
+                            await fetch("/api/auth/logout", { method: "POST" });
+                            window.location.href = "/login";
+                          } catch {
+                            window.location.href = "/login";
+                          }
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#888] hover:text-red-400 hover:bg-red-500/5 transition-colors"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Dang xuat</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           ) : (
             /* Loading placeholder - shows while fetching profile */
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium bg-[#1A1A1A] border border-[#2A2A2A] text-[#555]">
-                <Coins className="w-4 h-4 animate-pulse" />
-                <span className="animate-pulse">Loading...</span>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-[#1A1A1A] border border-[#2A2A2A] text-[#555]">
+                <Zap className="w-4 h-4 animate-pulse" />
+                <span className="animate-pulse">--</span>
               </div>
-              <div className="w-9 h-9 bg-[#1A1A1A] rounded-full animate-pulse border-2 border-[#2A2A2A]" />
+              <div className="w-8 h-8 bg-[#1A1A1A] rounded-full animate-pulse border-2 border-[#2A2A2A]" />
             </div>
           )}
           
