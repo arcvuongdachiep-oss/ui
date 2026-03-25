@@ -41,6 +41,12 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Auth callback should never be blocked - it handles the OAuth response
+  const isAuthCallback = request.nextUrl.pathname.startsWith('/auth/callback')
+  if (isAuthCallback) {
+    return supabaseResponse
+  }
+
   // Protected routes that require authentication (including home page)
   const protectedRoutes = ['/', '/dashboard', '/protected']
   const isProtectedRoute = protectedRoutes.some(route => 
@@ -48,17 +54,17 @@ export async function updateSession(request: NextRequest) {
     (route !== '/' && request.nextUrl.pathname.startsWith(route))
   )
 
-  if (isProtectedRoute && !user) {
-    // no user, redirect to the login page
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
-  }
-
-  // If user is logged in and trying to access login page, redirect to home
+  // If user is logged in and trying to access login page, redirect to home immediately
   if (request.nextUrl.pathname === '/login' && user) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
+    return NextResponse.redirect(url)
+  }
+
+  // If no user and trying to access protected route, redirect to login
+  if (isProtectedRoute && !user) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
