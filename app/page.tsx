@@ -43,19 +43,21 @@ export default function Home() {
 
   // Fetch user profile on mount
   useEffect(() => {
+    console.log("[v0] useEffect triggered - fetching profile...");
     const fetchProfile = async () => {
       try {
-        console.log("[v0] Fetching user profile...");
+        console.log("[v0] Fetching user profile from /api/credits...");
         const response = await fetch("/api/credits");
         console.log("[v0] Profile response status:", response.status);
         
         if (response.ok) {
           const data = await response.json();
-          console.log("[v0] Profile data received:", data);
+          console.log("[v0] User Credits:", data.credits, "Role:", data.role);
+          console.log("[v0] Full profile data:", JSON.stringify(data));
           setUserProfile(data);
         } else {
           const errorData = await response.json();
-          console.log("[v0] Profile fetch error:", errorData);
+          console.log("[v0] Profile fetch error:", JSON.stringify(errorData));
         }
       } catch (error) {
         console.error("[v0] Error fetching profile:", error);
@@ -307,10 +309,13 @@ export default function Home() {
               </div>
             </div>
           ) : (
-            /* Loading placeholder */
+            /* Loading placeholder - shows while fetching profile */
             <div className="flex items-center gap-3">
-              <div className="h-8 w-20 bg-[#1A1A1A] rounded-full animate-pulse" />
-              <div className="w-9 h-9 bg-[#1A1A1A] rounded-full animate-pulse" />
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium bg-[#1A1A1A] border border-[#2A2A2A] text-[#555]">
+                <Coins className="w-4 h-4 animate-pulse" />
+                <span className="animate-pulse">Loading...</span>
+              </div>
+              <div className="w-9 h-9 bg-[#1A1A1A] rounded-full animate-pulse border-2 border-[#2A2A2A]" />
             </div>
           )}
           
