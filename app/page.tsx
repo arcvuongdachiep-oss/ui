@@ -46,24 +46,42 @@ export default function Home() {
 
   // Client-side auth check + fetch profile directly from Supabase
   useEffect(() => {
+    console.log("[v0] page.tsx - useEffect started");
     const supabase = createClient();
 
     const loadUser = async () => {
+      console.log("[v0] page.tsx - loadUser called");
+      
       // Get user directly from Supabase client (bypasses server cookies issue)
       const { data: { user }, error } = await supabase.auth.getUser();
       
+      console.log("[v0] page.tsx - getUser result:", { 
+        hasUser: !!user, 
+        email: user?.email, 
+        error: error?.message 
+      });
+      
       if (error || !user) {
-        // Not logged in - redirect to login
+        console.log("[v0] page.tsx - No user found, redirecting to /login");
         router.push("/login");
         return;
       }
 
+      console.log("[v0] page.tsx - User found, fetching profile for:", user.id);
+      
       // Fetch profile from database
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("credits, role, email, full_name, avatar_url")
         .eq("id", user.id)
         .single();
+
+      console.log("[v0] page.tsx - Profile result:", { 
+        hasProfile: !!profile, 
+        credits: profile?.credits,
+        role: profile?.role,
+        error: profileError?.message 
+      });
 
       if (profile) {
         setUserProfile({
@@ -74,6 +92,7 @@ export default function Home() {
           fullName: profile.full_name,
           avatarUrl: profile.avatar_url,
         });
+        console.log("[v0] page.tsx - Profile set from database");
       } else {
         // Profile not created yet - use data from auth user
         setUserProfile({
@@ -84,6 +103,7 @@ export default function Home() {
           fullName: user.user_metadata?.full_name || user.user_metadata?.name,
           avatarUrl: user.user_metadata?.avatar_url || user.user_metadata?.picture,
         });
+        console.log("[v0] page.tsx - Profile set from user metadata");
       }
     };
 
@@ -91,6 +111,7 @@ export default function Home() {
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("[v0] page.tsx - Auth state changed:", event, !!session);
       if (event === "SIGNED_OUT" || !session) {
         router.push("/login");
       }
