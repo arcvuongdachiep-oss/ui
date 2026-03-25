@@ -259,7 +259,7 @@ export default function Home() {
         </div>
         <div className="flex items-center gap-3">
           {/* User Profile & Credits Display */}
-          {userProfile && (
+          {userProfile ? (
             <div className="flex items-center gap-3">
               {/* Credits Badge */}
               <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
@@ -305,6 +305,12 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+            </div>
+          ) : (
+            /* Loading placeholder */
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-20 bg-[#1A1A1A] rounded-full animate-pulse" />
+              <div className="w-9 h-9 bg-[#1A1A1A] rounded-full animate-pulse" />
             </div>
           )}
           

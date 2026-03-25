@@ -69,19 +69,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Check if user email is verified (email_confirmed_at from Supabase Auth)
-  if (isProtectedRoute && user) {
-    // Get full user data to check email_confirmed_at
-    const { data: userData } = await supabase.auth.getUser()
-    const emailConfirmed = userData?.user?.email_confirmed_at
-    
-    // If email not confirmed, redirect to a verification page
-    if (!emailConfirmed) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/verify-email'
-      return NextResponse.redirect(url)
-    }
-  }
+  // Note: Email verification check removed because Google OAuth already verifies emails
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   // If you're creating a new response object with NextResponse.next() make sure to:

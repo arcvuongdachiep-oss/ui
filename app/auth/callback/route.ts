@@ -4,24 +4,28 @@ import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
+  const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
 
-  // Production URL
-  const productionUrl = "https://hiepd5.com";
-  const isLocalEnv = process.env.NODE_ENV === "development";
-  const baseUrl = isLocalEnv ? new URL(request.url).origin : productionUrl;
+  // Use request origin for redirect
+  const baseUrl = origin;
+  
+  console.log("[v0] Callback - Starting, code exists:", !!code);
+  console.log("[v0] Callback - Base URL:", baseUrl);
 
   if (code) {
     const cookieStore = await cookies();
     const headerStore = await headers();
     
-    // Get user IP address from headers
+    // Get user IP address from headers with fallback
     const forwardedFor = headerStore.get("x-forwarded-for");
     const realIp = headerStore.get("x-real-ip");
-    const userIp = forwardedFor?.split(",")[0]?.trim() || realIp || "unknown";
+    const cfConnectingIp = headerStore.get("cf-connecting-ip");
+    const userIp = forwardedFor?.split(",")[0]?.trim() || realIp || cfConnectingIp || "127.0.0.1";
     
     console.log("[v0] Callback - IP detected:", userIp);
+    console.log("[v0] Callback - Headers - x-forwarded-for:", forwardedFor);
+    console.log("[v0] Callback - Headers - x-real-ip:", realIp);
 
     // Create client for session handling
     const supabase = createServerClient(

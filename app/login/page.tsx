@@ -15,18 +15,25 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient();
+      
+      // Use current origin for redirect (works in both dev and prod)
+      const redirectUrl = `${window.location.origin}/auth/callback`;
+      console.log("[v0] Login - Redirect URL:", redirectUrl);
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: "https://hiepd5.com/auth/callback",
+          redirectTo: redirectUrl,
         },
       });
 
       if (error) {
+        console.log("[v0] Login - OAuth error:", error);
         setError(error.message);
         setIsLoading(false);
       }
-    } catch {
+    } catch (err) {
+      console.log("[v0] Login - Exception:", err);
       setError("Đã xảy ra lỗi không mong muốn");
       setIsLoading(false);
     }
