@@ -2,8 +2,11 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-// Initialize Gemini API
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+// Validate API Key exists
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+// Initialize Gemini API (will be validated per request)
+const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 
 type ModeId = 'strict' | 'creative' | 'cinematic';
 
@@ -60,6 +63,14 @@ const MODES: ModeConfig[] = [
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if API Key is configured
+    if (!genAI || !GEMINI_API_KEY) {
+      return NextResponse.json(
+        { error: "Thiếu API Key trong thiết lập. Vui lòng liên hệ quản trị viên." },
+        { status: 500 }
+      );
+    }
+
     const supabase = await createClient();
     
     // Verify user authentication
