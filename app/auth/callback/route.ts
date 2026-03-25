@@ -13,6 +13,10 @@ export async function GET(request: Request) {
   console.log("[v0] Callback - Starting, code exists:", !!code);
   console.log("[v0] Callback - Base URL:", baseUrl);
 
+  // Prepare the redirect response first
+  const redirectUrl = new URL("/", baseUrl);
+  const response = NextResponse.redirect(redirectUrl);
+
   if (code) {
     const cookieStore = await cookies();
     const headerStore = await headers();
@@ -24,10 +28,8 @@ export async function GET(request: Request) {
     const userIp = forwardedFor?.split(",")[0]?.trim() || realIp || cfConnectingIp || "127.0.0.1";
     
     console.log("[v0] Callback - IP detected:", userIp);
-    console.log("[v0] Callback - Headers - x-forwarded-for:", forwardedFor);
-    console.log("[v0] Callback - Headers - x-real-ip:", realIp);
 
-    // Create client for session handling
+    // Create client for session handling - set cookies on the response
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -37,19 +39,18 @@ export async function GET(request: Request) {
             return cookieStore.getAll();
           },
           setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              );
-            } catch {
-              // Ignore
-            }
+            cookiesToSet.forEach(({ name, value, options }) => {
+              // Set on both cookieStore and response
+              cookieStore.set(name, value, options);
+              response.cookies.set(name, value, options);
+            });
           },
         },
       }
     );
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
+    console.log("[v0] Callback - Exchange session error:", error);
 
     if (!error) {
       // Get user after session exchange
@@ -120,7 +121,8 @@ export async function GET(request: Request) {
         }
       }
       
-      return NextResponse.redirect(`${baseUrl}/`);
+      console.log("[v0] Callback - Redirecting to home with cookies set");
+      return response;
     } else {
       console.log("[v0] Callback - Session exchange error:", error);
     }

@@ -41,6 +41,8 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  console.log("[v0] Proxy - Path:", request.nextUrl.pathname, "User:", user?.email || "none");
+
   // Auth callback and API routes should never be blocked
   const isAuthCallback = request.nextUrl.pathname.startsWith('/auth/callback')
   const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
