@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { RotateCcw, Zap, Crown, AlertCircle, X, LogOut, ChevronDown, Clock, Loader2 } from "lucide-react";
+import { RotateCcw, Zap, Crown, AlertCircle, X, LogOut, ChevronDown, Clock, Loader2, MessageCircle, ExternalLink } from "lucide-react";
 import Image from "next/image";
 import type { ModeId, PromptResult } from "@/lib/types";
 import { ModeSelector, MODES } from "@/components/mode-selector";
@@ -143,8 +143,8 @@ export default function Home() {
             const optimized = await optimizeImage(dataUrl);
             setRefImage(optimized.dataUrl);
             setOptimizedRefImage(optimized);
-          } catch (error) {
-            console.error("Failed to optimize image:", error);
+          } catch {
+            // Fallback to original if optimization fails
             setRefImage(dataUrl);
           }
           setIsOptimizing(false);
@@ -410,13 +410,13 @@ export default function Home() {
                     {/* Menu Items */}
                     <div className="py-1">
                       {!userProfile.isPro && (
-                        <a
-                          href="/upgrade"
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#888] hover:text-[#F27D26] hover:bg-[#F27D26]/5 transition-colors"
+                        <button
+                          onClick={() => setShowUpgradeModal(true)}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#888] hover:text-[#F27D26] hover:bg-[#F27D26]/5 transition-colors"
                         >
                           <Crown className="w-4 h-4" />
                           <span>Nang cap Pro</span>
-                        </a>
+                        </button>
                       )}
                       <button
                         onClick={async () => {
@@ -477,70 +477,112 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      {/* Upgrade Modal */}
+      {/* Upgrade Modal - Coming Soon */}
       <AnimatePresence>
         {showUpgradeModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
             onClick={() => setShowUpgradeModal(false)}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#0A0A0A] border border-[#1A1A1A] rounded-2xl p-8 max-w-md w-full shadow-2xl"
+              className="bg-gradient-to-b from-[#0F0F0F] to-[#0A0A0A] border border-[#1A1A1A] rounded-3xl p-8 max-w-md w-full shadow-2xl relative overflow-hidden"
             >
-              <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-[#F27D26]/10 border border-[#F27D26]/30 flex items-center justify-center">
-                <Crown className="w-8 h-8 text-[#F27D26]" />
+              {/* Decorative gradient */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-[#F27D26]/10 rounded-full blur-3xl pointer-events-none" />
+              
+              {/* Close button */}
+              <button
+                onClick={() => setShowUpgradeModal(false)}
+                className="absolute top-4 right-4 p-2 text-[#666] hover:text-white hover:bg-[#1A1A1A] rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              
+              {/* Icon */}
+              <div className="relative w-20 h-20 mx-auto mb-6">
+                <div className="absolute inset-0 bg-[#F27D26]/20 rounded-full animate-pulse" />
+                <div className="relative w-full h-full rounded-full bg-gradient-to-br from-[#F27D26] to-yellow-500 flex items-center justify-center shadow-lg shadow-[#F27D26]/30">
+                  <Clock className="w-10 h-10 text-white" />
+                </div>
               </div>
               
-              <h2 className="text-2xl font-black uppercase tracking-tighter italic text-center mb-2">
-                Nang Cap Pro
+              {/* Title */}
+              <h2 className="text-2xl font-black uppercase tracking-tight text-center mb-2 bg-gradient-to-r from-[#F27D26] to-yellow-400 bg-clip-text text-transparent">
+                Coming Soon
               </h2>
-              
-              <p className="text-sm text-[#666] text-center mb-6">
-                {errorMessage || "Ban da het luot mien phi. Nang cap len Pro de su dung khong gioi han!"}
+              <p className="text-lg font-semibold text-center text-white/90 mb-4">
+                Tinh nang dang duoc phat trien
               </p>
               
-              <div className="space-y-3 mb-6">
-                <div className="flex items-center gap-3 text-sm text-[#888]">
-                  <div className="w-5 h-5 rounded-full bg-[#F27D26]/20 flex items-center justify-center">
-                    <span className="text-[#F27D26] text-xs">✓</span>
-                  </div>
-                  <span>Khong gioi han so luot tao prompt</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-[#888]">
-                  <div className="w-5 h-5 rounded-full bg-[#F27D26]/20 flex items-center justify-center">
-                    <span className="text-[#F27D26] text-xs">✓</span>
-                  </div>
-                  <span>Uu tien xu ly nhanh hon</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-[#888]">
-                  <div className="w-5 h-5 rounded-full bg-[#F27D26]/20 flex items-center justify-center">
-                    <span className="text-[#F27D26] text-xs">✓</span>
-                  </div>
-                  <span>Ho tro ky thuat 24/7</span>
-                </div>
-              </div>
+              {/* Description */}
+              <p className="text-sm text-[#888] text-center mb-8 leading-relaxed">
+                Chung toi dang no luc hoan thien he thong thanh toan tu dong. Neu ban muon su dung nhieu luot hon ngay bay gio, dung ngan ngai lien he de duoc ho tro rieng.
+              </p>
               
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowUpgradeModal(false)}
-                  className="flex-1 py-3 px-4 rounded-xl border border-[#2A2A2A] text-[#888] hover:bg-[#1A1A1A] transition-colors font-medium"
-                >
-                  De sau
-                </button>
+              {/* Contact buttons */}
+              <div className="space-y-3">
+                {/* Zalo button */}
                 <a
-                  href="/upgrade"
-                  className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-[#F27D26] to-yellow-500 text-white font-bold text-center hover:opacity-90 transition-opacity"
+                  href="https://zalo.me/0979591156"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-3 w-full py-4 px-6 rounded-2xl bg-[#0068FF] hover:bg-[#0055DD] text-white font-bold transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#0068FF]/30"
                 >
-                  Nang cap ngay
+                  <svg className="w-6 h-6" viewBox="0 0 48 48" fill="currentColor">
+                    <path d="M24 4C12.954 4 4 12.954 4 24s8.954 20 20 20 20-8.954 20-20S35.046 4 24 4zm0 36c-8.837 0-16-7.163-16-16S15.163 8 24 8s16 7.163 16 16-7.163 16-16 16z"/>
+                    <path d="M33.8 19.5c-.7-1.3-2.1-2.1-3.6-2.1h-3.6c-2.3 0-4.2 1.9-4.2 4.2v8.8c0 .6.5 1.1 1.1 1.1s1.1-.5 1.1-1.1v-3.6h5.6c2.3 0 4.2-1.9 4.2-4.2 0-1.1-.4-2.2-1.1-3.1h.5zm-3.6 5.1h-5.6v-3c0-1.1.9-2 2-2h3.6c1.1 0 2 .9 2 2s-.9 2-2 2zM14.2 17.4c-2.3 0-4.2 1.9-4.2 4.2v8.8c0 .6.5 1.1 1.1 1.1s1.1-.5 1.1-1.1v-3.6h2c2.3 0 4.2-1.9 4.2-4.2s-1.9-4.2-4.2-4.2zm0 6.2h-2v-2c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2z"/>
+                  </svg>
+                  <span>Zalo: 0979 591 156</span>
+                </a>
+                
+                {/* Facebook button */}
+                <a
+                  href="https://www.facebook.com/vuongdachiep/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-3 w-full py-4 px-6 rounded-2xl bg-[#1877F2] hover:bg-[#1565D8] text-white font-bold transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#1877F2]/30"
+                >
+                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                  </svg>
+                  <span>Facebook: HIEPD5</span>
+                  <ExternalLink className="w-4 h-4 opacity-60" />
                 </a>
               </div>
+              
+              {/* Divider */}
+              <div className="flex items-center gap-4 my-6">
+                <div className="flex-1 h-px bg-[#1A1A1A]" />
+                <span className="text-[10px] text-[#444] uppercase tracking-widest">hoac</span>
+                <div className="flex-1 h-px bg-[#1A1A1A]" />
+              </div>
+              
+              {/* Copy phone number */}
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText("0979591156");
+                  setErrorMessage(null);
+                  const btn = document.getElementById("copy-phone-btn");
+                  if (btn) {
+                    btn.textContent = "Da sao chep!";
+                    setTimeout(() => {
+                      btn.textContent = "Sao chep so dien thoai";
+                    }, 2000);
+                  }
+                }}
+                id="copy-phone-btn"
+                className="w-full py-3 px-4 rounded-xl border border-[#2A2A2A] text-[#888] hover:text-[#F27D26] hover:border-[#F27D26]/50 hover:bg-[#F27D26]/5 transition-all text-sm font-medium"
+              >
+                Sao chep so dien thoai
+              </button>
             </motion.div>
           </motion.div>
         )}
