@@ -1,9 +1,9 @@
 // Image optimization utilities for Gemini AI
-// Resize to 720p and compress to reduce token usage
+// Resize to 720p (max 1280px longest side) and compress to WebP/JPEG
 
-const MAX_WIDTH = 1280;
-const MAX_HEIGHT = 720;
-const JPEG_QUALITY = 0.8;
+const MAX_DIMENSION = 1280; // Max longest side (720p equivalent)
+const WEBP_QUALITY = 0.85;
+const JPEG_QUALITY = 0.85;
 
 export interface OptimizedImage {
   dataUrl: string;
@@ -12,6 +12,7 @@ export interface OptimizedImage {
   optimizedSize: number;
   width: number;
   height: number;
+  format: 'webp' | 'jpeg';
 }
 
 export interface TokenEstimate {
@@ -21,7 +22,22 @@ export interface TokenEstimate {
 }
 
 /**
- * Resize and compress image to 720p max resolution
+ * Check if browser supports WebP encoding
+ */
+function supportsWebP(): boolean {
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1;
+    canvas.height = 1;
+    return canvas.toDataURL("image/webp").startsWith("data:image/webp");
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Resize and compress image to 720p max resolution (longest side 1280px)
+ * Uses WebP format if supported, falls back to JPEG
  */
 export async function optimizeImage(dataUrl: string): Promise<OptimizedImage> {
   return new Promise((resolve, reject) => {
@@ -29,45 +45,56 @@ export async function optimizeImage(dataUrl: string): Promise<OptimizedImage> {
     img.crossOrigin = "anonymous";
     
     img.onload = () => {
-      // Calculate new dimensions while maintaining aspect ratio
-      let { width, height } = img;
-      const originalSize = Math.round((dataUrl.length * 3) / 4); // Approximate original size
-      
-      if (width > MAX_WIDTH || height > MAX_HEIGHT) {
-        const ratio = Math.min(MAX_WIDTH / width, MAX_HEIGHT / height);
-        width = Math.round(width * ratio);
-        height = Math.round(height * ratio);
+      try {
+        // Calculate new dimensions - scale based on longest side
+        let { width, height } = img;
+        const originalSize = Math.round((dataUrl.length * 3) / 4);
+        
+        const longestSide = Math.max(width, height);
+        if (longestSide > MAX_DIMENSION) {
+          const ratio = MAX_DIMENSION / longestSide;
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        
+        // Create canvas and draw resized image
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Failed to get canvas context"));
+          return;
+        }
+        
+        // Use better image smoothing for quality resize
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Try WebP first (smaller file size), fallback to JPEG
+        const useWebP = supportsWebP();
+        const format = useWebP ? "webp" : "jpeg";
+        const quality = useWebP ? WEBP_QUALITY : JPEG_QUALITY;
+        const mimeType = useWebP ? "image/webp" : "image/jpeg";
+        
+        const optimizedDataUrl = canvas.toDataURL(mimeType, quality);
+        const base64 = optimizedDataUrl.split(",")[1];
+        const optimizedSize = Math.round((base64.length * 3) / 4);
+        
+        resolve({
+          dataUrl: optimizedDataUrl,
+          base64,
+          originalSize,
+          optimizedSize,
+          width,
+          height,
+          format,
+        });
+      } catch (error) {
+        reject(error);
       }
-      
-      // Create canvas and draw resized image
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        reject(new Error("Failed to get canvas context"));
-        return;
-      }
-      
-      // Use better image smoothing
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = "high";
-      ctx.drawImage(img, 0, 0, width, height);
-      
-      // Convert to JPEG with compression
-      const optimizedDataUrl = canvas.toDataURL("image/jpeg", JPEG_QUALITY);
-      const base64 = optimizedDataUrl.split(",")[1];
-      const optimizedSize = Math.round((base64.length * 3) / 4);
-      
-      resolve({
-        dataUrl: optimizedDataUrl,
-        base64,
-        originalSize,
-        optimizedSize,
-        width,
-        height,
-      });
     };
     
     img.onerror = () => reject(new Error("Failed to load image"));
