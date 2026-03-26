@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Copy, Check, Layers } from "lucide-react";
+import { Copy, Check, Layers, Zap } from "lucide-react";
 import type { ModeId, ModeConfig, PromptResult } from "@/lib/types";
+import { FlowIframe } from "./flow-iframe";
 
 interface ResultsPanelProps {
   selectedMode: ModeId;
@@ -19,6 +20,7 @@ export function ResultsPanel({
   // Track copied state separately for English and Vietnamese
   const [copiedEn, setCopiedEn] = useState<number | null>(null);
   const [copiedVi, setCopiedVi] = useState<number | null>(null);
+  const [showFlow, setShowFlow] = useState(false);
 
   const handleCopyEnglish = async (text: string, idx: number) => {
     await navigator.clipboard.writeText(text);
@@ -169,6 +171,32 @@ export function ResultsPanel({
                 </div>
               </motion.div>
             ))}
+
+            {/* Create with Flow Button */}
+            {!showFlow && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: results.length * 0.1 + 0.2 }}
+                className="flex justify-center pt-4"
+              >
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setShowFlow(true)}
+                  className="flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-[#F27D26] to-yellow-500 text-white font-bold text-sm uppercase tracking-wider shadow-xl shadow-[#F27D26]/30 hover:shadow-[#F27D26]/50 transition-all"
+                >
+                  <Zap className="w-5 h-5" />
+                  <span>Bat dau tao anh voi Flow</span>
+                </motion.button>
+              </motion.div>
+            )}
+
+            {/* Flow Iframe */}
+            <FlowIframe 
+              isVisible={showFlow} 
+              onClose={() => setShowFlow(false)} 
+            />
           </motion.div>
         )}
       </AnimatePresence>
