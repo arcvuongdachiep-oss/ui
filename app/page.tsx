@@ -40,6 +40,8 @@ export default function Home() {
   const [optimizedRefImage, setOptimizedRefImage] = useState<OptimizedImage | null>(null);
   const [loading, setLoading] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const [optimizingIndices, setOptimizingIndices] = useState<number[]>([]); // Track which base images are optimizing
+  const [isRefOptimizing, setIsRefOptimizing] = useState(false); // Track ref image optimization
   const [results, setResults] = useState<PromptResult[]>([]);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [tokenEstimate, setTokenEstimate] = useState<TokenEstimate | null>(null);
@@ -108,45 +110,73 @@ export default function Home() {
     const remainingSlots = 4 - baseImages.length;
     const filesToProcess = files.slice(0, remainingSlots);
 
+    if (filesToProcess.length === 0) return;
+
     setIsOptimizing(true);
 
-    for (const file of filesToProcess) {
-      const reader = new FileReader();
-      reader.onloadend = async (event) => {
-        if (event.target?.result) {
-          const dataUrl = event.target.result as string;
-          try {
-            const optimized = await optimizeImage(dataUrl);
-            setBaseImages((prev) => [...prev, optimized.dataUrl]);
-            setOptimizedBaseImages((prev) => [...prev, optimized]);
-      } catch {
-        // Silent fail
-      }
-        }
-      };
-      reader.readAsDataURL(file);
-    }
+    // Process each file with proper async handling
+    const processFile = async (file: File, startIndex: number, fileIndex: number): Promise<void> => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = async (event) => {
+          if (event.target?.result) {
+            const dataUrl = event.target.result as string;
+            const targetIndex = startIndex + fileIndex;
+            
+            // Add placeholder image and mark as optimizing
+            setBaseImages((prev) => [...prev, dataUrl]);
+            setOptimizingIndices((prev) => [...prev, targetIndex]);
+            
+            try {
+              const optimized = await optimizeImage(dataUrl);
+              // Replace placeholder with optimized version
+              setBaseImages((prev) => {
+                const updated = [...prev];
+                updated[targetIndex] = optimized.dataUrl;
+                return updated;
+              });
+              setOptimizedBaseImages((prev) => [...prev, optimized]);
+            } catch {
+              // Keep original if optimization fails
+            }
+            
+            // Remove from optimizing list
+            setOptimizingIndices((prev) => prev.filter(i => i !== targetIndex));
+          }
+          resolve();
+        };
+        reader.readAsDataURL(file);
+      });
+    };
 
-    // Small delay to ensure all images are processed
-    setTimeout(() => setIsOptimizing(false), 500);
+    const startIndex = baseImages.length;
+    await Promise.all(filesToProcess.map((file, idx) => processFile(file, startIndex, idx)));
+    
+    setIsOptimizing(false);
   }, [baseImages.length]);
 
   const handleRefUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setIsOptimizing(true);
+      setIsRefOptimizing(true);
+      
       const reader = new FileReader();
       reader.onloadend = async (event) => {
         if (event.target?.result) {
           const dataUrl = event.target.result as string;
+          // Show placeholder immediately with blur
+          setRefImage(dataUrl);
+          
           try {
             const optimized = await optimizeImage(dataUrl);
             setRefImage(optimized.dataUrl);
             setOptimizedRefImage(optimized);
           } catch {
-            // Fallback to original if optimization fails
-            setRefImage(dataUrl);
+            // Keep original if optimization fails
           }
+          
+          setIsRefOptimizing(false);
           setIsOptimizing(false);
         }
       };
@@ -608,11 +638,13 @@ export default function Home() {
                   refImage={refImage}
                   loading={loading}
                   isOptimizing={isOptimizing}
+                  optimizingIndices={optimizingIndices}
+                  isRefOptimizing={isRefOptimizing}
                   tokenEstimate={tokenEstimate}
                   savings={savings}
                   progress={progress}
                   statusMessage={statusMessage}
-                  isButtonDisabled={isButtonDisabled}
+                  isButtonDisabled={isButtonDisabled || optimizingIndices.length > 0 || isRefOptimizing}
                   cooldownTime={cooldownTime}
                   onBack={() => setSelectedMode(null)}
                   onBaseUpload={handleBaseUpload}

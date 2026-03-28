@@ -24,6 +24,8 @@ interface ImageUploaderProps {
   refImage: string | null;
   loading: boolean;
   isOptimizing: boolean;
+  optimizingIndices?: number[]; // Track which base images are still optimizing
+  isRefOptimizing?: boolean; // Track if ref image is optimizing
   tokenEstimate: TokenEstimate | null;
   savings: number;
   progress?: number;
@@ -45,6 +47,8 @@ export function ImageUploader({
   refImage,
   loading,
   isOptimizing,
+  optimizingIndices = [],
+  isRefOptimizing = false,
   tokenEstimate,
   savings,
   progress = 0,
@@ -115,36 +119,59 @@ export function ImageUploader({
             </label>
             <div className="grid grid-cols-2 gap-2">
               <AnimatePresence mode="popLayout">
-                {baseImages.map((img, idx) => (
-                  <motion.div
-                    key={idx}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    layout
-                    className="relative aspect-square rounded-xl overflow-hidden border border-[#222] group"
-                  >
-                    <img
-                      src={img}
-                      alt={`Base ${idx}`}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <button
-                      onClick={() => onRemoveBase(idx)}
-                      className="absolute top-2 right-2 bg-black/60 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:scale-110"
+                {baseImages.map((img, idx) => {
+                  const isThisOptimizing = optimizingIndices.includes(idx);
+                  return (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      layout
+                      className="relative aspect-square rounded-xl overflow-hidden border border-[#222] group"
                     >
-                      <X size={12} />
-                    </button>
-                    <span className="absolute bottom-2 left-2 text-[8px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
-                      #{idx + 1}
-                    </span>
-                    {/* Optimized badge */}
-                    <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-emerald-500/80 text-[6px] font-bold uppercase rounded text-black">
-                      720p
-                    </span>
-                  </motion.div>
-                ))}
+                      <img
+                        src={img}
+                        alt={`Base ${idx}`}
+                        className={`w-full h-full object-cover transition-all duration-300 ${
+                          isThisOptimizing ? "blur-sm scale-105" : ""
+                        }`}
+                      />
+                      {/* Optimizing overlay */}
+                      {isThisOptimizing && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-2"
+                        >
+                          <Loader2 className="w-6 h-6 text-[#F27D26] animate-spin" />
+                          <span className="text-[8px] text-white/80 uppercase tracking-widest font-bold">
+                            Dang nen...
+                          </span>
+                        </motion.div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <button
+                        onClick={() => onRemoveBase(idx)}
+                        disabled={isThisOptimizing}
+                        className={`absolute top-2 right-2 bg-black/60 p-1.5 rounded-lg transition-all hover:bg-red-500 hover:scale-110 ${
+                          isThisOptimizing ? "hidden" : "opacity-0 group-hover:opacity-100"
+                        }`}
+                      >
+                        <X size={12} />
+                      </button>
+                      <span className="absolute bottom-2 left-2 text-[8px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                        #{idx + 1}
+                      </span>
+                      {/* Optimized badge - only show when done */}
+                      {!isThisOptimizing && (
+                        <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-emerald-500/80 text-[6px] font-bold uppercase rounded text-black">
+                          720p
+                        </span>
+                      )}
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
               {baseImages.length < 4 && (
                 <motion.label
@@ -193,22 +220,41 @@ export function ImageUploader({
                   <img
                     src={refImage}
                     alt="Style"
-                    className="w-full h-full object-cover"
+                    className={`w-full h-full object-cover transition-all duration-300 ${
+                      isRefOptimizing ? "blur-sm scale-105" : ""
+                    }`}
                   />
+                  {/* Optimizing overlay */}
+                  {isRefOptimizing && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-2"
+                    >
+                      <Loader2 className="w-8 h-8 text-[#F27D26] animate-spin" />
+                      <span className="text-[10px] text-white/80 uppercase tracking-widest font-bold">
+                        Dang nen anh...
+                      </span>
+                    </motion.div>
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <button
-                    onClick={onRemoveRef}
-                    className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2"
-                  >
-                    <RotateCcw className="w-6 h-6 text-white" />
-                    <span className="text-[10px] uppercase tracking-widest">
-                      Change
+                  {!isRefOptimizing && (
+                    <button
+                      onClick={onRemoveRef}
+                      className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2"
+                    >
+                      <RotateCcw className="w-6 h-6 text-white" />
+                      <span className="text-[10px] uppercase tracking-widest">
+                        Change
+                      </span>
+                    </button>
+                  )}
+                  {/* Optimized badge - only show when done */}
+                  {!isRefOptimizing && (
+                    <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-emerald-500/80 text-[6px] font-bold uppercase rounded text-black">
+                      720p
                     </span>
-                  </button>
-                  {/* Optimized badge */}
-                  <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-emerald-500/80 text-[6px] font-bold uppercase rounded text-black">
-                    720p
-                  </span>
+                  )}
                 </>
               ) : (
                 <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer hover:bg-[#F27D26]/5 transition-colors">
