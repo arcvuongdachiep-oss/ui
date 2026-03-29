@@ -8,6 +8,8 @@ import type { ModeId, PromptResult } from "@/lib/types";
 import { ModeSelector, MODES } from "@/components/mode-selector";
 import { ImageUploader } from "@/components/image-uploader";
 import { ResultsPanel } from "@/components/results-panel";
+import { DashboardTabs } from "@/components/dashboard-tabs";
+import { ComingSoonTab } from "@/components/coming-soon";
 import { 
   optimizeImage, 
   estimateTokens, 
@@ -15,6 +17,8 @@ import {
   type OptimizedImage,
   type TokenEstimate 
 } from "@/lib/image-optimizer";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 interface UserProfile {
   credits: number;
@@ -33,6 +37,12 @@ interface QueueStatus {
 }
 
 export default function Home() {
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<"architect" | "academy" | "showcase">("architect");
+  const [user, setUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // AI Architect tab state
   const [selectedMode, setSelectedMode] = useState<ModeId | null>(null);
   const [baseImages, setBaseImages] = useState<string[]>([]);
   const [optimizedBaseImages, setOptimizedBaseImages] = useState<OptimizedImage[]>([]);
@@ -40,8 +50,8 @@ export default function Home() {
   const [optimizedRefImage, setOptimizedRefImage] = useState<OptimizedImage | null>(null);
   const [loading, setLoading] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
-  const [optimizingIndices, setOptimizingIndices] = useState<number[]>([]); // Track which base images are optimizing
-  const [isRefOptimizing, setIsRefOptimizing] = useState(false); // Track ref image optimization
+  const [optimizingIndices, setOptimizingIndices] = useState<number[]>([]);
+  const [isRefOptimizing, setIsRefOptimizing] = useState(false);
   const [results, setResults] = useState<PromptResult[]>([]);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [tokenEstimate, setTokenEstimate] = useState<TokenEstimate | null>(null);
@@ -55,6 +65,18 @@ export default function Home() {
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
   const [cooldownTime, setCooldownTime] = useState(0);
   const cooldownRef = useRef<NodeJS.Timeout | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Check auth status on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      const supabase = createClient();
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      setUser(currentUser || null);
+      setIsLoading(false);
+    };
+    checkAuth();
+  }, []);
 
   // Cleanup cooldown timer
   useEffect(() => {
@@ -216,6 +238,12 @@ export default function Home() {
   };
 
   const generatePrompts = async () => {
+    // Check if user is authenticated - redirect to login if not
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
     if (!selectedMode || optimizedBaseImages.length === 0 || !optimizedRefImage) return;
 
     const imageCount = optimizedBaseImages.length;
@@ -618,15 +646,29 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      <main className="max-w-[1800px] mx-auto p-4 md:p-6">
-        <AnimatePresence mode="wait">
-          {!selectedMode ? (
-            <ModeSelector onSelectMode={setSelectedMode} />
-          ) : (
-            <motion.div
-              key="step2"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+      <main className="max-w-[1800px] mx-auto p-0 md:p-0 flex flex-col">
+        {/* Dashboard Tabs */}
+        <DashboardTabs activeTab={activeTab} onTabChange={setActiveTab} />
+
+        {/* Tab Content */}
+        <div className="flex-1 px-4 md:px-6 py-6">
+          <AnimatePresence mode="wait">
+            {/* Tab 1: AI Architect */}
+            {activeTab === "architect" && (
+              <motion.div
+                key="architect"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <AnimatePresence mode="wait">
+                  {!selectedMode ? (
+                    <ModeSelector onSelectMode={setSelectedMode} />
+                  ) : (
+                    <motion.div
+                      key="step2"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="space-y-6"
             >
@@ -660,9 +702,29 @@ export default function Home() {
                   results={results}
                 />
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            )}
+
+            {/* Tab 2: D5 Academy */}
+            {activeTab === "academy" && (
+              <ComingSoonTab
+                title="Làm chủ D5 Render cùng Hiep"
+                description="Khóa học toàn diện về D5 Render từ cơ bản đến nâng cao. Học cách tối ưu hóa render, cài đặt material, lighting và post-processing."
+              />
+            )}
+
+            {/* Tab 3: Showcase */}
+            {activeTab === "showcase" && (
+              <ComingSoonTab
+                title="Sản phẩm tiêu biểu D5-AI"
+                description="Tương tác với các dự án được tạo bởi AI, khám phá cách kết hợp công nghệ AI với D5 Render để tạo ra những hình ảnh kiến trúc ấn tượng."
+              />
+            )}
+          </AnimatePresence>
+        </div>
       </main>
 
       {/* Footer */}
