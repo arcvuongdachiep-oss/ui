@@ -8,8 +8,6 @@ import type { ModeId, PromptResult } from "@/lib/types";
 import { ModeSelector, MODES } from "@/components/mode-selector";
 import { ImageUploader } from "@/components/image-uploader";
 import { ResultsPanel } from "@/components/results-panel";
-import { DashboardTabs } from "@/components/dashboard-tabs";
-import { ComingSoonTab } from "@/components/coming-soon";
 import { 
   optimizeImage, 
   estimateTokens, 
@@ -17,8 +15,6 @@ import {
   type OptimizedImage,
   type TokenEstimate 
 } from "@/lib/image-optimizer";
-import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 
 interface UserProfile {
   credits: number;
@@ -37,12 +33,6 @@ interface QueueStatus {
 }
 
 export default function Home() {
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"architect" | "academy" | "showcase">("architect");
-  const [user, setUser] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // AI Architect tab state
   const [selectedMode, setSelectedMode] = useState<ModeId | null>(null);
   const [baseImages, setBaseImages] = useState<string[]>([]);
   const [optimizedBaseImages, setOptimizedBaseImages] = useState<OptimizedImage[]>([]);
@@ -50,8 +40,8 @@ export default function Home() {
   const [optimizedRefImage, setOptimizedRefImage] = useState<OptimizedImage | null>(null);
   const [loading, setLoading] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
-  const [optimizingIndices, setOptimizingIndices] = useState<number[]>([]);
-  const [isRefOptimizing, setIsRefOptimizing] = useState(false);
+  const [optimizingIndices, setOptimizingIndices] = useState<number[]>([]); // Track which base images are optimizing
+  const [isRefOptimizing, setIsRefOptimizing] = useState(false); // Track ref image optimization
   const [results, setResults] = useState<PromptResult[]>([]);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [tokenEstimate, setTokenEstimate] = useState<TokenEstimate | null>(null);
@@ -65,18 +55,6 @@ export default function Home() {
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
   const [cooldownTime, setCooldownTime] = useState(0);
   const cooldownRef = useRef<NodeJS.Timeout | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  // Check auth status on mount
-  useEffect(() => {
-    const checkAuth = async () => {
-      const supabase = createClient();
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      setUser(currentUser || null);
-      setIsLoading(false);
-    };
-    checkAuth();
-  }, []);
 
   // Cleanup cooldown timer
   useEffect(() => {
@@ -238,13 +216,6 @@ export default function Home() {
   };
 
   const generatePrompts = async () => {
-    // Check if user is authenticated - show upgrade modal with login prompt
-    if (!user) {
-      setErrorMessage("Ban can dang nhap de tao prompt. Vui long dang nhap hoac dang ky tai khoan.");
-      setShowUpgradeModal(true);
-      return;
-    }
-
     if (!selectedMode || optimizedBaseImages.length === 0 || !optimizedRefImage) return;
 
     const imageCount = optimizedBaseImages.length;
@@ -573,37 +544,18 @@ export default function Home() {
                 </div>
               </div>
               
-              {/* Title - dynamic based on user state */}
+              {/* Title */}
               <h2 className="text-2xl font-black uppercase tracking-tight text-center mb-2 bg-gradient-to-r from-[#F27D26] to-yellow-400 bg-clip-text text-transparent">
-                {!user ? "Dang nhap de tiep tuc" : "Coming Soon"}
+                Coming Soon
               </h2>
               <p className="text-lg font-semibold text-center text-white/90 mb-4">
-                {!user ? "Ban can dang nhap de tao prompt" : "Tinh nang dang duoc phat trien"}
+                Tinh nang dang duoc phat trien
               </p>
               
               {/* Description */}
               <p className="text-sm text-[#888] text-center mb-8 leading-relaxed">
-                {!user 
-                  ? "Dang nhap bang tai khoan Google de bat dau tao prompt AI cho du an kien truc cua ban."
-                  : "Chung toi dang no luc hoan thien he thong thanh toan tu dong. Neu ban muon su dung nhieu luot hon ngay bay gio, dung ngan ngai lien he de duoc ho tro rieng."
-                }
+                Chung toi dang no luc hoan thien he thong thanh toan tu dong. Neu ban muon su dung nhieu luot hon ngay bay gio, dung ngan ngai lien he de duoc ho tro rieng.
               </p>
-              
-              {/* Login button for guests */}
-              {!user && (
-                <a
-                  href="/login"
-                  className="flex items-center justify-center gap-3 w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-[#F27D26] to-yellow-500 text-white font-bold transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#F27D26]/30 mb-4"
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                  </svg>
-                  <span>Dang nhap voi Google</span>
-                </a>
-              )}
               
               {/* Contact buttons */}
               <div className="space-y-3">
@@ -666,29 +618,15 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      <main className="max-w-[1800px] mx-auto p-0 md:p-0 flex flex-col">
-        {/* Dashboard Tabs */}
-        <DashboardTabs activeTab={activeTab} onTabChange={setActiveTab} />
-
-        {/* Tab Content */}
-        <div className="flex-1 px-4 md:px-6 py-6">
-          <AnimatePresence mode="wait">
-            {/* Tab 1: AI Architect */}
-            {activeTab === "architect" && (
-              <motion.div
-                key="architect"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
-                <AnimatePresence mode="wait">
-                  {!selectedMode ? (
-                    <ModeSelector onSelectMode={setSelectedMode} />
-                  ) : (
-                    <motion.div
-                      key="step2"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
+      <main className="max-w-[1800px] mx-auto p-4 md:p-6">
+        <AnimatePresence mode="wait">
+          {!selectedMode ? (
+            <ModeSelector onSelectMode={setSelectedMode} />
+          ) : (
+            <motion.div
+              key="step2"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="space-y-6"
             >
@@ -722,29 +660,9 @@ export default function Home() {
                   results={results}
                 />
               </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            )}
-
-            {/* Tab 2: D5 Academy */}
-            {activeTab === "academy" && (
-              <ComingSoonTab
-                title="Làm chủ D5 Render cùng Hiep"
-                description="Khóa học toàn diện về D5 Render từ cơ bản đến nâng cao. Học cách tối ưu hóa render, cài đặt material, lighting và post-processing."
-              />
-            )}
-
-            {/* Tab 3: Showcase */}
-            {activeTab === "showcase" && (
-              <ComingSoonTab
-                title="Sản phẩm tiêu biểu D5-AI"
-                description="Tương tác với các dự án được tạo bởi AI, khám phá cách kết hợp công nghệ AI với D5 Render để tạo ra những hình ảnh kiến trúc ấn tượng."
-              />
-            )}
-          </AnimatePresence>
-        </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
 
       {/* Footer */}
