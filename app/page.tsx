@@ -18,6 +18,7 @@ import {
   type TokenEstimate 
 } from "@/lib/image-optimizer";
 import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 interface UserProfile {
   credits: number;
@@ -36,6 +37,7 @@ interface QueueStatus {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"architect" | "academy" | "showcase">("architect");
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -236,10 +238,8 @@ export default function Home() {
   };
 
   const generatePrompts = async () => {
-    // Check if user is authenticated - show login modal if not
+    // Check if user is authenticated - redirect to login if not
     if (!user) {
-      // Optionally show an auth modal or redirect
-      const router = require("next/navigation").useRouter();
       router.push("/login");
       return;
     }

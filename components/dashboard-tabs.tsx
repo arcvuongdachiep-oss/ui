@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Zap, BookOpen, Gallery } from "lucide-react";
+import { Zap, BookOpen, Images } from "lucide-react";
 
 interface DashboardTabsProps {
   activeTab: "architect" | "academy" | "showcase";
@@ -24,7 +24,7 @@ const TABS = [
   {
     id: "showcase",
     label: "Showcase",
-    icon: Gallery,
+    icon: Images,
     description: "Sản phẩm tiêu biểu D5-AI",
   },
 ] as const;
