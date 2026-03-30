@@ -2,13 +2,12 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { RotateCcw, Zap, Crown, AlertCircle, X, LogOut, ChevronDown, Clock, Loader2, MessageCircle, ExternalLink, Sparkles, BookOpen, Images, FolderOpen, History } from "lucide-react";
+import { RotateCcw, Zap, Crown, AlertCircle, X, LogOut, ChevronDown, Clock, Loader2, MessageCircle, ExternalLink, Sparkles, BookOpen, Images, FolderOpen } from "lucide-react";
 import Image from "next/image";
 import type { ModeId, PromptResult } from "@/lib/types";
 import { ModeSelector, MODES } from "@/components/mode-selector";
 import { ImageUploader } from "@/components/image-uploader";
 import { ResultsPanel } from "@/components/results-panel";
-import { MyLibrary } from "@/components/my-library";
 import { 
   optimizeImage, 
   estimateTokens, 
@@ -37,7 +36,6 @@ type TabId = "architect" | "tutorial" | "showcase" | "library";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabId>("architect");
-  const [user, setUser] = useState<User | null>(null);
   const [selectedMode, setSelectedMode] = useState<ModeId | null>(null);
   const [baseImages, setBaseImages] = useState<string[]>([]);
   const [optimizedBaseImages, setOptimizedBaseImages] = useState<OptimizedImage[]>([]);
@@ -60,56 +58,6 @@ export default function Home() {
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
   const [cooldownTime, setCooldownTime] = useState(0);
   const cooldownRef = useRef<NodeJS.Timeout | null>(null);
-  const authListenerRef = useRef<{ unsubscribe: () => void } | null>(null);
-
-  // Auth state management with proper cleanup
-  useEffect(() => {
-    let isMounted = true;
-    const supabase = createClient();
-
-    // Get initial user
-    const initAuth = async () => {
-      try {
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        if (isMounted) {
-          setUser(currentUser);
-        }
-      } catch (error) {
-        // Silent fail - user is guest
-        if (isMounted) {
-          setUser(null);
-        }
-      }
-    };
-
-    initAuth();
-
-    // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (!isMounted) return;
-        
-        // Update user state based on session
-        setUser(session?.user || null);
-        
-        // On sign out, clear user-specific state
-        if (event === 'SIGNED_OUT') {
-          setUserProfile(null);
-        }
-      }
-    );
-
-    authListenerRef.current = subscription;
-
-    // Cleanup function - prevent orphaned locks
-    return () => {
-      isMounted = false;
-      if (authListenerRef.current) {
-        authListenerRef.current.unsubscribe();
-        authListenerRef.current = null;
-      }
-    };
-  }, []);
 
   // Cleanup cooldown timer
   useEffect(() => {
@@ -270,33 +218,6 @@ export default function Home() {
     }, 1000);
   };
 
-  const savePromptToLibrary = async (results: PromptResult[]) => {
-    if (!user) return;
-    
-    try {
-      const supabase = createClient();
-      
-      for (const result of results) {
-        const { error } = await supabase
-          .from("user_prompts")
-          .insert({
-            user_id: user.id,
-            mode: selectedMode,
-            base_images: baseImages,
-            ref_image: refImage || "",
-            prompt_en: result.prompt,
-            prompt_vi: result.vietnamese,
-          });
-        
-        if (error) {
-          console.error("[v0] Error saving prompt to library:", error);
-        }
-      }
-    } catch (err) {
-      console.error("[v0] Error:", err);
-    }
-  };
-
   const generatePrompts = async () => {
     if (!selectedMode || optimizedBaseImages.length === 0 || !optimizedRefImage) return;
 
@@ -378,11 +299,6 @@ export default function Home() {
       setProgress(100);
       setStatusMessage("Hoan thanh!");
       setResults(data.results);
-      
-      // Save prompts to library if user is logged in
-      if (user && data.results && data.results.length > 0) {
-        savePromptToLibrary(data.results);
-      }
       
       // Update local credits after successful generation
       if (data.remainingCredits !== undefined && data.remainingCredits >= 0) {
@@ -584,7 +500,7 @@ export default function Home() {
               { id: "architect" as TabId, label: "AI Architect", icon: Sparkles },
               { id: "tutorial" as TabId, label: "D5 Tutorial", icon: BookOpen },
               { id: "showcase" as TabId, label: "Showcase", icon: Images },
-              { id: "library" as TabId, label: "My Library", icon: History },
+              { id: "library" as TabId, label: "Library", icon: FolderOpen },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -597,7 +513,7 @@ export default function Home() {
               >
                 <tab.icon className="w-4 h-4" />
                 <span>{tab.label}</span>
-                {tab.id !== "architect" && tab.id !== "library" && (
+                {tab.id !== "architect" && (
                   <span className="px-1.5 py-0.5 text-[8px] uppercase tracking-wider font-bold bg-[#1A1A1A] text-[#555] rounded">
                     Soon
                   </span>
@@ -841,7 +757,7 @@ export default function Home() {
             </motion.div>
           )}
 
-          {/* Tab 4: My Library */}
+          {/* Tab 4: Library - Coming Soon */}
           {activeTab === "library" && (
             <motion.div
               key="library"
@@ -849,8 +765,18 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
+              className="flex flex-col items-center justify-center min-h-[60vh] text-center"
             >
-              <MyLibrary user={user} />
+              <div className="w-20 h-20 rounded-full bg-[#F27D26]/10 flex items-center justify-center mb-6">
+                <FolderOpen className="w-10 h-10 text-[#F27D26]" />
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-2">Library</h2>
+              <p className="text-[#666] max-w-md mb-4">
+                Thu vien prompt va tai nguyen cho D5 Render. Dang duoc phat trien.
+              </p>
+              <span className="px-4 py-2 bg-[#1A1A1A] rounded-full text-sm text-[#F27D26] font-medium">
+                Coming Soon
+              </span>
             </motion.div>
           )}
         </AnimatePresence>
