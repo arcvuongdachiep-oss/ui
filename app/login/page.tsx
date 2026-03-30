@@ -15,30 +15,14 @@ export default function LoginPage() {
   // Check if user is already logged in
   useEffect(() => {
     const checkUser = async () => {
-      try {
-        const supabase = createClient();
-        const { data, error } = await supabase.auth.getUser();
-        
-        // If there's a session error, clear it and continue
-        if (error) {
-          try {
-            await supabase.auth.signOut({ scope: 'local' });
-          } catch {
-            // Silent fail
-          }
-          setCheckingAuth(false);
-          return;
-        }
-        
-        if (data.user) {
-          router.push("/");
-          return;
-        }
-        setCheckingAuth(false);
-      } catch {
-        // On any error, just show the login page
-        setCheckingAuth(false);
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        router.push("/");
+        return;
       }
+      setCheckingAuth(false);
     };
     checkUser();
   }, [router]);
