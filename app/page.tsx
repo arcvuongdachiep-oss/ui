@@ -37,6 +37,7 @@ type TabId = "architect" | "tutorial" | "showcase" | "library";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabId>("architect");
+  const [user, setUser] = useState<User | null>(null);
   const [selectedMode, setSelectedMode] = useState<ModeId | null>(null);
   const [baseImages, setBaseImages] = useState<string[]>([]);
   const [optimizedBaseImages, setOptimizedBaseImages] = useState<OptimizedImage[]>([]);
