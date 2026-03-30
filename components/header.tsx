@@ -28,78 +28,127 @@ export function Header() {
   const isLoginPage = pathname === "/login";
 
   useEffect(() => {
+    let isMounted = true;
+    let subscription: { unsubscribe: () => void } | null = null;
     const supabase = createClient();
     
     const fetchProfile = async (userId: string, userEmail?: string, userMetadata?: Record<string, unknown>) => {
-      const { data: profile, error } = await supabase
-        .from("profiles")
-        .select("credits, role, email, full_name, avatar_url")
-        .eq("id", userId)
-        .single();
+      try {
+        const { data: profile, error } = await supabase
+          .from("profiles")
+          .select("credits, role, email, full_name, avatar_url")
+          .eq("id", userId)
+          .single();
 
-      if (profile) {
-        setUserProfile({
-          credits: profile.credits ?? 10,
-          role: profile.role ?? "free",
-          isPro: profile.role === "pro",
-          email: profile.email || userEmail,
-          fullName: profile.full_name || (userMetadata?.full_name as string) || (userMetadata?.name as string),
-          avatarUrl: profile.avatar_url || (userMetadata?.avatar_url as string) || (userMetadata?.picture as string),
-        });
-      } else if (error?.code === "PGRST116") {
-        // Profile doesn't exist - use metadata from auth
-        setUserProfile({
-          credits: 10,
-          role: "free",
-          isPro: false,
-          email: userEmail,
-          fullName: (userMetadata?.full_name as string) || (userMetadata?.name as string),
-          avatarUrl: (userMetadata?.avatar_url as string) || (userMetadata?.picture as string),
-        });
+        if (!isMounted) return;
+
+        if (profile) {
+          setUserProfile({
+            credits: profile.credits ?? 10,
+            role: profile.role ?? "free",
+            isPro: profile.role === "pro",
+            email: profile.email || userEmail,
+            fullName: profile.full_name || (userMetadata?.full_name as string) || (userMetadata?.name as string),
+            avatarUrl: profile.avatar_url || (userMetadata?.avatar_url as string) || (userMetadata?.picture as string),
+          });
+        } else if (error?.code === "PGRST116") {
+          // Profile doesn't exist - use metadata from auth
+          setUserProfile({
+            credits: 10,
+            role: "free",
+            isPro: false,
+            email: userEmail,
+            fullName: (userMetadata?.full_name as string) || (userMetadata?.name as string),
+            avatarUrl: (userMetadata?.avatar_url as string) || (userMetadata?.picture as string),
+          });
+        }
+        setIsLoading(false);
+      } catch {
+        if (isMounted) setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     const initializeAuth = async () => {
-      // Use getUser() instead of getSession() for more reliable auth check
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      
-      if (currentUser) {
-        setUser(currentUser);
-        await fetchProfile(currentUser.id, currentUser.email, currentUser.user_metadata);
-      } else {
-        setIsLoading(false);
+      try {
+        // Use getUser() instead of getSession() for more reliable auth check
+        const { data, error } = await supabase.auth.getUser();
+        
+        if (!isMounted) return;
+        
+        if (error) {
+          // Clear corrupted session if auth error
+          if (error.message?.includes('session') || error.message?.includes('token')) {
+            try {
+              await supabase.auth.signOut({ scope: 'local' });
+            } catch {
+              // Silent fail
+            }
+          }
+          setIsLoading(false);
+          return;
+        }
+        
+        if (data.user) {
+          setUser(data.user);
+          await fetchProfile(data.user.id, data.user.email, data.user.user_metadata);
+        } else {
+          setIsLoading(false);
+        }
+      } catch {
+        if (isMounted) setIsLoading(false);
       }
     };
 
     initializeAuth();
 
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === "SIGNED_IN" && session?.user) {
-          setUser(session.user);
-          await fetchProfile(session.user.id, session.user.email, session.user.user_metadata);
-        } else if (event === "SIGNED_OUT") {
-          setUser(null);
-          setUserProfile(null);
-          setIsLoading(false);
-        } else if (event === "TOKEN_REFRESHED" && session?.user) {
-          // Refresh profile data on token refresh
-          setUser(session.user);
+    // Listen for auth state changes with error handling
+    try {
+      const { data } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          if (!isMounted) return;
+          
+          try {
+            if (event === "SIGNED_IN" && session?.user) {
+              setUser(session.user);
+              await fetchProfile(session.user.id, session.user.email, session.user.user_metadata);
+            } else if (event === "SIGNED_OUT") {
+              setUser(null);
+              setUserProfile(null);
+              setIsLoading(false);
+            } else if (event === "TOKEN_REFRESHED" && session?.user) {
+              setUser(session.user);
+            }
+          } catch {
+            // Silent fail for auth state change errors
+          }
         }
-      }
-    );
+      );
+      subscription = data.subscription;
+    } catch {
+      // Silent fail if listener setup fails
+    }
 
     return () => {
-      subscription.unsubscribe();
+      isMounted = false;
+      if (subscription) {
+        try {
+          subscription.unsubscribe();
+        } catch {
+          // Silent fail
+        }
+      }
     };
   }, []);
 
   const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      router.push("/login");
+    } catch {
+      // Force redirect even if signOut fails
+      router.push("/login");
+    }
   };
 
   // Don't render on login page
