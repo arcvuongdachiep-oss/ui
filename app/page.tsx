@@ -60,24 +60,57 @@ export default function Home() {
   const [cooldownTime, setCooldownTime] = useState(0);
   const cooldownRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Check auth status on mount
+  // Check auth status on mount and listen for changes
   useEffect(() => {
     const supabase = createClient();
+    
+    // Initial auth check with session refresh
     const checkAuth = async () => {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      setUser(currentUser);
+      // First try to get session (faster)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUser(session.user);
+        setShowLoginModal(false);
+      } else {
+        // Fallback to getUser which validates with server
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        setUser(currentUser);
+        if (currentUser) {
+          setShowLoginModal(false);
+        }
+      }
     };
     checkAuth();
 
-    // Listen for auth changes
+    // Listen for auth changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setUser(session?.user || null);
         if (session?.user) {
           setShowLoginModal(false);
         }
+        
+        // On SIGNED_IN event, also refresh profile data
+        if (event === "SIGNED_IN" && session?.user) {
+          // Small delay to ensure profile is created in callback
+          setTimeout(async () => {
+            try {
+              const response = await fetch("/api/credits");
+              if (response.ok) {
+                const data = await response.json();
+                setUserProfile({
+                  credits: data.credits,
+                  isPro: data.role === "pro",
+                });
+              }
+            } catch {
+              // Silent fail
+            }
+          }, 500);
+        }
       }
     );
+    
     return () => subscription.unsubscribe();
   }, []);
 
