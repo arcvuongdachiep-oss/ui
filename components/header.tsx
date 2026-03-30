@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Coins, Crown, LogOut, LogIn } from "lucide-react";
+import { Coins, Crown, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 
@@ -117,20 +117,8 @@ export function Header() {
     );
   }
 
-  // Show login button for guests
-  if (!user) {
-    return (
-      <header className="fixed top-0 right-0 z-50 p-4">
-        <Link
-          href="/login"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#F27D26] to-yellow-500 text-white font-bold text-sm uppercase tracking-wider hover:opacity-90 transition-opacity shadow-lg shadow-[#F27D26]/30"
-        >
-          <LogIn className="w-4 h-4" />
-          <span>Dang nhap</span>
-        </Link>
-      </header>
-    );
-  }
+  // Don't render if no user
+  if (!user) return null;
 
   return (
     <header className="fixed top-0 right-0 z-50 p-4">
