@@ -63,48 +63,72 @@ export default function Home() {
   // Check auth status on mount and listen for changes
   useEffect(() => {
     const supabase = createClient();
+    let isMounted = true;
     
     // Initial auth check - use getUser() for reliable server-validated auth
     const checkAuth = async () => {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      console.log("[v0] Initial auth check - user:", currentUser?.email || "null");
-      setUser(currentUser);
-      if (currentUser) {
-        setShowLoginModal(false);
+      try {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (isMounted) {
+          console.log("[v0] Initial auth check - user:", currentUser?.email || "null");
+          setUser(currentUser);
+          if (currentUser) {
+            setShowLoginModal(false);
+          }
+        }
+      } catch (error) {
+        console.log("[v0] Error getting user:", error);
       }
     };
+    
+    // Check auth immediately
     checkAuth();
 
     // Listen for auth changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setUser(session?.user || null);
+        if (!isMounted) return;
+        
+        console.log("[v0] Auth state changed:", event, "email:", session?.user?.email || "null");
+        
+        // Update user state based on event
         if (session?.user) {
+          setUser(session.user);
           setShowLoginModal(false);
+          console.log("[v0] User updated to:", session.user.email);
+        } else {
+          setUser(null);
+          console.log("[v0] User cleared");
         }
         
-        // On SIGNED_IN event, also refresh profile data
+        // Refresh profile on SIGNED_IN
         if (event === "SIGNED_IN" && session?.user) {
-          // Small delay to ensure profile is created in callback
           setTimeout(async () => {
             try {
               const response = await fetch("/api/credits");
-              if (response.ok) {
+              if (response.ok && isMounted) {
                 const data = await response.json();
                 setUserProfile({
                   credits: data.credits,
                   isPro: data.role === "pro",
+                  email: data.email,
+                  fullName: data.fullName,
+                  avatarUrl: data.avatarUrl,
                 });
               }
             } catch {
-              // Silent fail
+              console.log("[v0] Error fetching profile");
             }
           }, 500);
         }
       }
     );
     
-    return () => subscription.unsubscribe();
+    // Cleanup
+    return () => {
+      isMounted = false;
+      subscription?.unsubscribe();
+    };
   }, []);
 
   // Cleanup cooldown timer
