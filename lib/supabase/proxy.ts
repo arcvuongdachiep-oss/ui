@@ -48,21 +48,21 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse
   }
 
-  // Protected routes that require authentication (including home page)
-  const protectedRoutes = ['/', '/dashboard', '/protected']
+  // Protected routes that require authentication (NOT homepage - allow guest access)
+  const protectedRoutes = ['/dashboard', '/protected']
   const isProtectedRoute = protectedRoutes.some(route => 
     request.nextUrl.pathname === route || 
-    (route !== '/' && request.nextUrl.pathname.startsWith(route))
+    request.nextUrl.pathname.startsWith(route)
   )
 
-  // If user is logged in and trying to access login page, redirect to home immediately
+  // If user is logged in and trying to access login page, redirect to home
   if (request.nextUrl.pathname === '/login' && user) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)
   }
 
-  // If no user and trying to access protected route, redirect to login
+  // Only redirect to login for protected routes (not homepage)
   if (isProtectedRoute && !user) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
