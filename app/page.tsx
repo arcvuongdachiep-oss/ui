@@ -60,6 +60,56 @@ export default function Home() {
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
   const [cooldownTime, setCooldownTime] = useState(0);
   const cooldownRef = useRef<NodeJS.Timeout | null>(null);
+  const authListenerRef = useRef<{ unsubscribe: () => void } | null>(null);
+
+  // Auth state management with proper cleanup
+  useEffect(() => {
+    let isMounted = true;
+    const supabase = createClient();
+
+    // Get initial user
+    const initAuth = async () => {
+      try {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (isMounted) {
+          setUser(currentUser);
+        }
+      } catch (error) {
+        // Silent fail - user is guest
+        if (isMounted) {
+          setUser(null);
+        }
+      }
+    };
+
+    initAuth();
+
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (!isMounted) return;
+        
+        // Update user state based on session
+        setUser(session?.user || null);
+        
+        // On sign out, clear user-specific state
+        if (event === 'SIGNED_OUT') {
+          setUserProfile(null);
+        }
+      }
+    );
+
+    authListenerRef.current = subscription;
+
+    // Cleanup function - prevent orphaned locks
+    return () => {
+      isMounted = false;
+      if (authListenerRef.current) {
+        authListenerRef.current.unsubscribe();
+        authListenerRef.current = null;
+      }
+    };
+  }, []);
 
   // Cleanup cooldown timer
   useEffect(() => {

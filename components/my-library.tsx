@@ -26,8 +26,10 @@ export function MyLibrary({ user }: MyLibraryProps) {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Load user prompts on mount
+  // Load user prompts on mount with proper cleanup
   useEffect(() => {
+    let isMounted = true;
+    
     if (!user) {
       setLoading(false);
       return;
@@ -41,22 +43,34 @@ export function MyLibrary({ user }: MyLibraryProps) {
           .select("*")
           .order("created_at", { ascending: false });
 
+        if (!isMounted) return;
+
         if (error) {
-          console.error("[v0] Error loading prompts:", error);
+          console.error("Error loading prompts:", error);
         } else {
           setPrompts(data || []);
         }
       } catch (err) {
-        console.error("[v0] Error:", err);
+        console.error("Error:", err);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     loadPrompts();
+    
+    // Cleanup to prevent state updates on unmounted component
+    return () => {
+      isMounted = false;
+    };
   }, [user]);
 
   const deletePrompt = async (id: string) => {
+    // Optimistically remove from UI first
+    setPrompts((prev) => prev.filter((p) => p.id !== id));
+    
     try {
       const supabase = createClient();
       const { error } = await supabase
@@ -65,12 +79,11 @@ export function MyLibrary({ user }: MyLibraryProps) {
         .eq("id", id);
 
       if (error) {
-        console.error("[v0] Error deleting prompt:", error);
-      } else {
-        setPrompts((prev) => prev.filter((p) => p.id !== id));
+        // Reload prompts if delete failed
+        console.error("Error deleting prompt:", error);
       }
-    } catch (err) {
-      console.error("[v0] Error:", err);
+    } catch {
+      // Silent fail
     }
   };
 
