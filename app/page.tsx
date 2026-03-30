@@ -64,20 +64,13 @@ export default function Home() {
   useEffect(() => {
     const supabase = createClient();
     
-    // Initial auth check with session refresh
+    // Initial auth check - use getUser() for reliable server-validated auth
     const checkAuth = async () => {
-      // First try to get session (faster)
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setUser(session.user);
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      console.log("[v0] Initial auth check - user:", currentUser?.email || "null");
+      setUser(currentUser);
+      if (currentUser) {
         setShowLoginModal(false);
-      } else {
-        // Fallback to getUser which validates with server
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        setUser(currentUser);
-        if (currentUser) {
-          setShowLoginModal(false);
-        }
       }
     };
     checkAuth();
@@ -274,10 +267,20 @@ export default function Home() {
   };
 
   const generatePrompts = async () => {
-    if (!selectedMode || optimizedBaseImages.length === 0 || !optimizedRefImage) return;
+    console.log("[v0] generatePrompts called");
+    console.log("[v0] selectedMode:", selectedMode);
+    console.log("[v0] optimizedBaseImages:", optimizedBaseImages.length);
+    console.log("[v0] optimizedRefImage:", !!optimizedRefImage);
+    console.log("[v0] user state:", user);
+    
+    if (!selectedMode || optimizedBaseImages.length === 0 || !optimizedRefImage) {
+      console.log("[v0] Early return - missing required data");
+      return;
+    }
 
     // Check if user is logged in - show login modal if not
     if (!user) {
+      console.log("[v0] No user in state, showing login modal");
       setShowLoginModal(true);
       return;
     }
