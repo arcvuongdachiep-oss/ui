@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { RotateCcw, Zap, Crown, AlertCircle, X, LogOut, ChevronDown, Clock, Loader2, MessageCircle, ExternalLink } from "lucide-react";
+import { RotateCcw, Zap, Crown, AlertCircle, X, LogOut, ChevronDown, Clock, Loader2, MessageCircle, ExternalLink, Sparkles, BookOpen, Images, FolderOpen } from "lucide-react";
 import Image from "next/image";
 import type { ModeId, PromptResult } from "@/lib/types";
 import { ModeSelector, MODES } from "@/components/mode-selector";
@@ -32,7 +32,10 @@ interface QueueStatus {
   rateLimitResetIn: number;
 }
 
+type TabId = "architect" | "tutorial" | "showcase" | "library";
+
 export default function Home() {
+  const [activeTab, setActiveTab] = useState<TabId>("architect");
   const [selectedMode, setSelectedMode] = useState<ModeId | null>(null);
   const [baseImages, setBaseImages] = useState<string[]>([]);
   const [optimizedBaseImages, setOptimizedBaseImages] = useState<OptimizedImage[]>([]);
@@ -489,6 +492,38 @@ export default function Home() {
         </div>
       </header>
 
+      {/* Tab Navigation */}
+      <nav className="bg-[#0A0A0A]/60 backdrop-blur-sm border-b border-[#1A1A1A] sticky top-[73px] z-40">
+        <div className="max-w-[1800px] mx-auto px-4">
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide py-2">
+            {[
+              { id: "architect" as TabId, label: "AI Architect", icon: Sparkles },
+              { id: "tutorial" as TabId, label: "D5 Tutorial", icon: BookOpen },
+              { id: "showcase" as TabId, label: "Showcase", icon: Images },
+              { id: "library" as TabId, label: "Library", icon: FolderOpen },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? "bg-[#F27D26]/10 text-[#F27D26] border border-[#F27D26]/30"
+                    : "text-[#666] hover:text-[#888] hover:bg-[#1A1A1A]/50"
+                }`}
+              >
+                <tab.icon className="w-4 h-4" />
+                <span>{tab.label}</span>
+                {tab.id !== "architect" && (
+                  <span className="px-1.5 py-0.5 text-[8px] uppercase tracking-wider font-bold bg-[#1A1A1A] text-[#555] rounded">
+                    Soon
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      </nav>
+
       {/* Error Toast */}
       <AnimatePresence>
         {errorMessage && !showUpgradeModal && (
@@ -620,46 +655,128 @@ export default function Home() {
 
       <main className="max-w-[1800px] mx-auto p-4 md:p-6">
         <AnimatePresence mode="wait">
-          {!selectedMode ? (
-            <ModeSelector onSelectMode={setSelectedMode} />
-          ) : (
+          {/* Tab 1: AI Architect - Default */}
+          {activeTab === "architect" && (
             <motion.div
-              key="step2"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="space-y-6"
+              key="architect"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
             >
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
-                <ImageUploader
-                  selectedMode={selectedMode}
-                  modeConfig={modeConfig}
-                  baseImages={baseImages}
-                  refImage={refImage}
-                  loading={loading}
-                  isOptimizing={isOptimizing}
-                  optimizingIndices={optimizingIndices}
-                  isRefOptimizing={isRefOptimizing}
-                  tokenEstimate={tokenEstimate}
-                  savings={savings}
-                  progress={progress}
-                  statusMessage={statusMessage}
-                  isButtonDisabled={isButtonDisabled || optimizingIndices.length > 0 || isRefOptimizing}
-                  cooldownTime={cooldownTime}
-                  onBack={() => setSelectedMode(null)}
-                  onBaseUpload={handleBaseUpload}
-                  onRefUpload={handleRefUpload}
-                  onRemoveBase={removeBaseImage}
-                  onRemoveRef={removeRefImage}
-                  onGenerate={generatePrompts}
-                />
+              <AnimatePresence mode="wait">
+                {!selectedMode ? (
+                  <ModeSelector onSelectMode={setSelectedMode} />
+                ) : (
+                  <motion.div
+                    key="step2"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="space-y-6"
+                  >
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
+                      <ImageUploader
+                        selectedMode={selectedMode}
+                        modeConfig={modeConfig}
+                        baseImages={baseImages}
+                        refImage={refImage}
+                        loading={loading}
+                        isOptimizing={isOptimizing}
+                        optimizingIndices={optimizingIndices}
+                        isRefOptimizing={isRefOptimizing}
+                        tokenEstimate={tokenEstimate}
+                        savings={savings}
+                        progress={progress}
+                        statusMessage={statusMessage}
+                        isButtonDisabled={isButtonDisabled || optimizingIndices.length > 0 || isRefOptimizing}
+                        cooldownTime={cooldownTime}
+                        onBack={() => setSelectedMode(null)}
+                        onBaseUpload={handleBaseUpload}
+                        onRefUpload={handleRefUpload}
+                        onRemoveBase={removeBaseImage}
+                        onRemoveRef={removeRefImage}
+                        onGenerate={generatePrompts}
+                      />
 
-                <ResultsPanel
-                  selectedMode={selectedMode}
-                  modeConfig={modeConfig}
-                  results={results}
-                />
+                      <ResultsPanel
+                        selectedMode={selectedMode}
+                        modeConfig={modeConfig}
+                        results={results}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
+
+          {/* Tab 2: D5 Tutorial - Coming Soon */}
+          {activeTab === "tutorial" && (
+            <motion.div
+              key="tutorial"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="flex flex-col items-center justify-center min-h-[60vh] text-center"
+            >
+              <div className="w-20 h-20 rounded-full bg-[#F27D26]/10 flex items-center justify-center mb-6">
+                <BookOpen className="w-10 h-10 text-[#F27D26]" />
               </div>
+              <h2 className="text-2xl font-bold text-white mb-2">D5 Tutorial</h2>
+              <p className="text-[#666] max-w-md mb-4">
+                Huong dan su dung D5 Render tu co ban den nang cao. Dang duoc phat trien.
+              </p>
+              <span className="px-4 py-2 bg-[#1A1A1A] rounded-full text-sm text-[#F27D26] font-medium">
+                Coming Soon
+              </span>
+            </motion.div>
+          )}
+
+          {/* Tab 3: Showcase - Coming Soon */}
+          {activeTab === "showcase" && (
+            <motion.div
+              key="showcase"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="flex flex-col items-center justify-center min-h-[60vh] text-center"
+            >
+              <div className="w-20 h-20 rounded-full bg-[#F27D26]/10 flex items-center justify-center mb-6">
+                <Images className="w-10 h-10 text-[#F27D26]" />
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-2">Showcase</h2>
+              <p className="text-[#666] max-w-md mb-4">
+                Bo suu tap cac tac pham kien truc duoc tao bang AI. Dang duoc phat trien.
+              </p>
+              <span className="px-4 py-2 bg-[#1A1A1A] rounded-full text-sm text-[#F27D26] font-medium">
+                Coming Soon
+              </span>
+            </motion.div>
+          )}
+
+          {/* Tab 4: Library - Coming Soon */}
+          {activeTab === "library" && (
+            <motion.div
+              key="library"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="flex flex-col items-center justify-center min-h-[60vh] text-center"
+            >
+              <div className="w-20 h-20 rounded-full bg-[#F27D26]/10 flex items-center justify-center mb-6">
+                <FolderOpen className="w-10 h-10 text-[#F27D26]" />
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-2">Library</h2>
+              <p className="text-[#666] max-w-md mb-4">
+                Thu vien prompt va tai nguyen cho D5 Render. Dang duoc phat trien.
+              </p>
+              <span className="px-4 py-2 bg-[#1A1A1A] rounded-full text-sm text-[#F27D26] font-medium">
+                Coming Soon
+              </span>
             </motion.div>
           )}
         </AnimatePresence>
