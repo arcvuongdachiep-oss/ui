@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { RotateCcw, Zap, Crown, AlertCircle, X, LogOut, ChevronDown, Clock, Loader2, MessageCircle, ExternalLink } from "lucide-react";
 import Image from "next/image";
-import type { ModeId, PromptResult } from "@/lib/types";
+import type { ModeId, PromptResult, TabId } from "@/lib/types";
 import { ModeSelector, MODES } from "@/components/mode-selector";
+import { Camera, Layers, Grid3X3, BookOpen } from "lucide-react";
 import { ImageUploader } from "@/components/image-uploader";
 import { ResultsPanel } from "@/components/results-panel";
 import { 
@@ -33,6 +34,7 @@ interface QueueStatus {
 }
 
 export default function Home() {
+  const [activeTab, setActiveTab] = useState<TabId>('ai-prompt');
   const [selectedMode, setSelectedMode] = useState<ModeId | null>(null);
   const [baseImages, setBaseImages] = useState<string[]>([]);
   const [optimizedBaseImages, setOptimizedBaseImages] = useState<OptimizedImage[]>([]);
@@ -216,7 +218,8 @@ export default function Home() {
   };
 
   const generatePrompts = async () => {
-    if (!selectedMode || optimizedBaseImages.length === 0 || !optimizedRefImage) return;
+    const isRefRequired = selectedMode !== 'random';
+    if (!selectedMode || optimizedBaseImages.length === 0 || (isRefRequired && !optimizedRefImage)) return;
 
     const imageCount = optimizedBaseImages.length;
 
@@ -256,7 +259,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           baseImages: optimizedBaseDataUrls,
-          refImage: optimizedRefImage.dataUrl,
+          refImage: optimizedRefImage?.dataUrl || null,
           mode: selectedMode,
         }),
       });
@@ -340,27 +343,51 @@ export default function Home() {
     <div className="min-h-screen bg-[#050505] text-[#E4E3E0] font-sans selection:bg-[#F27D26] selection:text-white">
       {/* Header */}
       <header className="border-b border-[#1A1A1A] p-4 flex justify-between items-center bg-[#0A0A0A]/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="flex items-center gap-3">
-          <motion.div
-            whileHover={{ scale: 1.1 }}
-            className="w-11 h-11 rounded-full overflow-hidden border-2 border-[#F27D26] shadow-[0_0_20px_rgba(242,125,38,0.4)]"
-          >
-            <Image
-              src="/icon.ico"
-              alt="HIEPD5 Logo"
-              width={44}
-              height={44}
-              className="w-full h-full object-cover"
-            />
-          </motion.div>
-          <div>
-            <h1 className="text-lg md:text-xl font-black tracking-tighter uppercase italic leading-none">
-              HIEPD5.COM
-            </h1>
-            <p className="text-[8px] md:text-[9px] text-[#666] uppercase tracking-[0.2em] md:tracking-[0.3em] font-bold">
-              Scientific Prompt Architect
-            </p>
+        <div className="flex items-center gap-4 md:gap-8">
+          <div className="flex items-center gap-3">
+            <motion.div
+              whileHover={{ scale: 1.1 }}
+              className="w-10 h-10 md:w-11 md:h-11 rounded-full overflow-hidden border-2 border-[#F27D26] shadow-[0_0_20px_rgba(242,125,38,0.4)]"
+            >
+              <Image
+                src="/icon.ico"
+                alt="HIEPD5 Logo"
+                width={44}
+                height={44}
+                className="w-full h-full object-cover"
+              />
+            </motion.div>
+            <div>
+              <h1 className="text-base md:text-xl font-black tracking-tighter uppercase italic leading-none">
+                HIEPD5.COM
+              </h1>
+              <p className="text-[7px] md:text-[9px] text-[#666] uppercase tracking-[0.2em] md:tracking-[0.3em] font-bold">
+                Scientific Prompt Architect
+              </p>
+            </div>
           </div>
+
+          {/* Tab Navigation */}
+          <nav className="hidden md:flex items-center gap-1 bg-black/50 p-1 rounded-lg border border-[#1A1A1A]">
+            {([
+              { id: 'ai-prompt', label: 'AI Prompt' },
+              { id: 'd5-tutorial', label: 'D5 Tutorial' },
+              { id: 'showcase', label: 'Showcase' },
+              { id: 'library', label: 'Library' },
+            ] as { id: TabId; label: string }[]).map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-4 py-2 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-[#F27D26] text-black shadow-[0_0_15px_rgba(242,125,38,0.3)]'
+                    : 'text-[#666] hover:text-white hover:bg-[#1A1A1A]'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
         </div>
         <div className="flex items-center gap-3">
           {/* User Profile & Credits Display */}
@@ -620,48 +647,336 @@ export default function Home() {
 
       <main className="max-w-[1800px] mx-auto p-4 md:p-6">
         <AnimatePresence mode="wait">
-          {!selectedMode ? (
-            <ModeSelector onSelectMode={setSelectedMode} />
-          ) : (
+          {activeTab === 'ai-prompt' ? (
             <motion.div
-              key="step2"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="space-y-6"
+              key="ai-prompt-tab"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="w-full"
             >
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
-                <ImageUploader
-                  selectedMode={selectedMode}
-                  modeConfig={modeConfig}
-                  baseImages={baseImages}
-                  refImage={refImage}
-                  loading={loading}
-                  isOptimizing={isOptimizing}
-                  optimizingIndices={optimizingIndices}
-                  isRefOptimizing={isRefOptimizing}
-                  tokenEstimate={tokenEstimate}
-                  savings={savings}
-                  progress={progress}
-                  statusMessage={statusMessage}
-                  isButtonDisabled={isButtonDisabled || optimizingIndices.length > 0 || isRefOptimizing}
-                  cooldownTime={cooldownTime}
-                  onBack={() => setSelectedMode(null)}
-                  onBaseUpload={handleBaseUpload}
-                  onRefUpload={handleRefUpload}
-                  onRemoveBase={removeBaseImage}
-                  onRemoveRef={removeRefImage}
-                  onGenerate={generatePrompts}
-                />
+              {!selectedMode ? (
+                <ModeSelector onSelectMode={setSelectedMode} />
+              ) : (
+                <motion.div
+                  key="step2"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="space-y-6"
+                >
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
+                    <ImageUploader
+                      selectedMode={selectedMode}
+                      modeConfig={modeConfig}
+                      baseImages={baseImages}
+                      refImage={refImage}
+                      loading={loading}
+                      isOptimizing={isOptimizing}
+                      optimizingIndices={optimizingIndices}
+                      isRefOptimizing={isRefOptimizing}
+                      tokenEstimate={tokenEstimate}
+                      savings={savings}
+                      progress={progress}
+                      statusMessage={statusMessage}
+                      isButtonDisabled={isButtonDisabled || optimizingIndices.length > 0 || isRefOptimizing}
+                      cooldownTime={cooldownTime}
+                      onBack={() => setSelectedMode(null)}
+                      onBaseUpload={handleBaseUpload}
+                      onRefUpload={handleRefUpload}
+                      onRemoveBase={removeBaseImage}
+                      onRemoveRef={removeRefImage}
+                      onGenerate={generatePrompts}
+                    />
 
-                <ResultsPanel
-                  selectedMode={selectedMode}
-                  modeConfig={modeConfig}
-                  results={results}
-                />
+                    <ResultsPanel
+                      selectedMode={selectedMode}
+                      modeConfig={modeConfig}
+                      results={results}
+                    />
+                  </div>
+                </motion.div>
+              )}
+
+              {/* AI Resources Section */}
+              {!selectedMode && (
+                <div className="mt-16 pt-16 border-t border-[#1A1A1A] space-y-12 max-w-5xl mx-auto">
+                  <div className="text-center space-y-4">
+                    <h2 className="text-3xl font-black uppercase tracking-tighter italic">AI ARCHVIZ RESOURCES</h2>
+                    <p className="text-[#666] uppercase tracking-[0.3em] text-[10px] font-bold">Master the tools of the future</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-[#F27D26]">
+                        <BookOpen className="w-4 h-4" />
+                        <h3 className="text-[11px] font-black uppercase tracking-widest">Video Huong Dan Su Dung</h3>
+                      </div>
+                      <div className="aspect-video rounded-2xl overflow-hidden border border-[#1A1A1A] bg-black shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+                        <iframe 
+                          className="w-full h-full"
+                          src="https://www.youtube.com/embed/auouVOCAbTI" 
+                          title="Huong dan su dung" 
+                          frameBorder="0" 
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                          allowFullScreen
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-[#F27D26]">
+                        <Grid3X3 className="w-4 h-4" />
+                        <h3 className="text-[11px] font-black uppercase tracking-widest">Ung dung AI trong Dien hoa</h3>
+                      </div>
+                      <div className="aspect-video rounded-2xl overflow-hidden border border-[#1A1A1A] bg-black shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+                        <iframe 
+                          className="w-full h-full"
+                          src="https://www.youtube.com/embed/videoseries?list=PLAxnVKb5XqwVdEsJm4-eKY2picTnVQn0E" 
+                          title="AI in Archviz Playlist" 
+                          frameBorder="0" 
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                          allowFullScreen
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          ) : activeTab === 'd5-tutorial' ? (
+            <motion.div
+              key="d5-tutorial-tab"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="max-w-6xl mx-auto py-8 md:py-12 space-y-16"
+            >
+              {/* Weekly D5 Render Section */}
+              <div className="space-y-8">
+                <div className="flex items-center gap-4">
+                  <div className="h-[1px] flex-1 bg-[#1A1A1A]" />
+                  <div className="text-center px-4 md:px-8">
+                    <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic leading-none text-[#F27D26]">WEEKLY D5 RENDER</h2>
+                    <p className="text-[#444] uppercase tracking-[0.3em] md:tracking-[0.4em] text-[8px] md:text-[9px] font-bold mt-2">Huong dan D5 Render moi tuan cung Hiep</p>
+                  </div>
+                  <div className="h-[1px] flex-1 bg-[#1A1A1A]" />
+                </div>
+
+                <div className="bg-[#0A0A0A] border border-[#1A1A1A] rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                  <div className="aspect-video w-full">
+                    <iframe 
+                      className="w-full h-full"
+                      src="https://www.youtube.com/embed/pMol34YU6Pk" 
+                      title="Weekly D5 Render Tutorial" 
+                      frameBorder="0" 
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                      allowFullScreen
+                    />
+                  </div>
+                  <div className="p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 bg-gradient-to-r from-[#0A0A0A] to-[#0D0D0D]">
+                    <div className="space-y-1 text-center md:text-left">
+                      <h3 className="text-lg md:text-xl font-black uppercase tracking-tighter italic">Cap nhat kien thuc moi tuan</h3>
+                      <p className="text-xs text-[#666]">Theo doi danh sach phat de khong bo lo cac ky thuat render moi nhat.</p>
+                    </div>
+                    <a 
+                      href="https://youtube.com/playlist?list=PLAxnVKb5XqwVaD79Kf3S6Tuguc2aM2A_M" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="px-6 md:px-8 py-3 md:py-4 bg-[#F27D26] text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#FF8C37] transition-all shadow-[0_0_20px_rgba(242,125,38,0.2)] whitespace-nowrap"
+                    >
+                      Xem danh sach phat
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Free Basic Course Section */}
+              <div className="space-y-8">
+                <div className="flex items-center gap-4">
+                  <div className="h-[1px] flex-1 bg-[#1A1A1A]" />
+                  <div className="text-center px-4 md:px-8">
+                    <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic leading-none text-[#F27D26]">FREE BASIC COURSE</h2>
+                    <p className="text-[#444] uppercase tracking-[0.3em] md:tracking-[0.4em] text-[8px] md:text-[9px] font-bold mt-2">Khoa hoc D5 Render co ban cho nguoi moi bat dau</p>
+                  </div>
+                  <div className="h-[1px] flex-1 bg-[#1A1A1A]" />
+                </div>
+
+                <div className="bg-[#0A0A0A] border border-[#1A1A1A] rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                  <div className="aspect-video w-full">
+                    <iframe 
+                      className="w-full h-full"
+                      src="https://www.youtube.com/embed/videoseries?list=PLAxnVKb5XqwUD_rpWIupGl20BT2cTIKBX" 
+                      title="D5 Render Basic Course" 
+                      frameBorder="0" 
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                      allowFullScreen
+                    />
+                  </div>
+                  <div className="p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 bg-gradient-to-r from-[#0A0A0A] to-[#0D0D0D]">
+                    <div className="space-y-1 text-center md:text-left">
+                      <h3 className="text-lg md:text-xl font-black uppercase tracking-tighter italic">Lo trinh lam chu D5 Render</h3>
+                      <p className="text-xs text-[#666]">Hoc tu con so 0 den khi lam chu anh sang va vat lieu chuyen nghiep.</p>
+                    </div>
+                    <a 
+                      href="https://youtube.com/playlist?list=PLAxnVKb5XqwUD_rpWIupGl20BT2cTIKBX" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="px-6 md:px-8 py-3 md:py-4 bg-[#F27D26] text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#FF8C37] transition-all shadow-[0_0_20px_rgba(242,125,38,0.2)] whitespace-nowrap"
+                    >
+                      Xem tren YouTube
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* D5 Masterclass Section */}
+              <div className="space-y-8">
+                <div className="text-center space-y-4">
+                  <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter italic leading-none">D5 MASTERCLASS</h2>
+                  <p className="text-[#666] uppercase tracking-[0.3em] md:tracking-[0.4em] text-[9px] md:text-[10px] font-bold">Scientific workflows for architectural visualization</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                  {[
+                    { title: "Advanced Lighting", level: "Expert", time: "24m", desc: "Mastering global illumination and volumetric light rays for cinematic depth." },
+                    { title: "Material Science", level: "Intermediate", time: "18m", desc: "Creating realistic PBR materials with custom displacement and roughness maps." },
+                    { title: "Atmospheric Depth", level: "Advanced", time: "15m", desc: "Using fog, particles, and weather effects to tell a compelling spatial story." },
+                    { title: "Camera Precision", level: "Pro", time: "12m", desc: "Professional photography techniques: Focal length, DOF, and composition rules." },
+                    { title: "Exterior Realism", level: "Expert", time: "32m", desc: "Full workflow for high-end exterior rendering from SketchUp to D5." },
+                    { title: "Interior Moods", level: "Intermediate", time: "20m", desc: "Crafting cozy and inviting interior spaces with natural light simulation." }
+                  ].map((tutorial, i) => (
+                    <div key={i} className="bg-[#0A0A0A] border border-[#1A1A1A] rounded-2xl overflow-hidden group hover:border-[#F27D26]/30 transition-all flex flex-col">
+                      <div className="aspect-video bg-[#050505] relative overflow-hidden">
+                        <img 
+                          src={`https://picsum.photos/seed/d5tut${i}/800/450`} 
+                          alt={tutorial.title}
+                          className="w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity group-hover:scale-105 duration-700"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-12 h-12 rounded-full bg-[#F27D26] flex items-center justify-center text-black scale-90 group-hover:scale-100 transition-transform shadow-[0_0_20px_rgba(242,125,38,0.4)]">
+                            <Camera size={20} />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-6 md:p-8 space-y-4 flex-1 flex flex-col">
+                        <div className="flex items-center justify-between">
+                          <span className="px-2 py-1 bg-[#F27D26]/10 text-[#F27D26] text-[9px] font-black uppercase tracking-widest rounded border border-[#F27D26]/20">{tutorial.level}</span>
+                          <span className="text-[9px] text-[#444] uppercase font-bold tracking-widest">{tutorial.time}</span>
+                        </div>
+                        <h3 className="text-lg md:text-xl font-black uppercase tracking-tighter italic leading-tight group-hover:text-[#F27D26] transition-colors">{tutorial.title}</h3>
+                        <p className="text-xs text-[#666] leading-relaxed flex-1">{tutorial.desc}</p>
+                        <button className="w-full py-3 md:py-4 bg-black border border-[#1A1A1A] rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-[#F27D26] hover:text-black hover:border-[#F27D26] transition-all mt-4">COMING SOON</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </motion.div>
-          )}
+          ) : activeTab === 'showcase' ? (
+            <motion.div
+              key="showcase-tab"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="py-8 md:py-12 space-y-12"
+            >
+              <div className="text-center space-y-4">
+                <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter italic">
+                  <span className="text-white">GALLERY</span> <span className="text-[#F27D26]">SHOWCASE</span>
+                </h2>
+                <p className="text-[#666] uppercase tracking-[0.3em] md:tracking-[0.4em] text-[9px] md:text-[10px] font-bold">The intersection of AI precision and human creativity</p>
+              </div>
+
+              {/* Masonry Gallery */}
+              <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4">
+                {[...Array(12)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="break-inside-avoid mb-4 group"
+                  >
+                    <div className="relative rounded-xl overflow-hidden border border-[#1A1A1A] hover:border-[#F27D26]/30 transition-all">
+                      <img
+                        src={`https://picsum.photos/seed/showcase${i}/${400 + (i % 3) * 100}/${300 + (i % 4) * 100}`}
+                        alt={`Showcase ${i + 1}`}
+                        className="w-full h-auto grayscale hover:grayscale-0 transition-all duration-500 group-hover:scale-105"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute bottom-4 left-4 right-4">
+                          <p className="text-[10px] text-[#F27D26] uppercase tracking-widest font-bold">Project Alpha {i + 1}</p>
+                          <p className="text-[8px] text-white/60 uppercase tracking-wider">Rendered with AI + D5</p>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          ) : activeTab === 'library' ? (
+            <motion.div
+              key="library-tab"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="max-w-6xl mx-auto py-8 md:py-12 space-y-16"
+            >
+              <div className="text-center space-y-4">
+                <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter italic">ASSET LIBRARY</h2>
+                <p className="text-[#666] uppercase tracking-[0.3em] md:tracking-[0.4em] text-[9px] md:text-[10px] font-bold">Professional resources for high-end visualization</p>
+              </div>
+
+              {/* Asset Categories */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[
+                  { icon: <Layers className="w-6 h-6" />, title: "PBR TEXTURES", count: "450+", desc: "Premium Assets" },
+                  { icon: <Grid3X3 className="w-6 h-6" />, title: "3D MODELS", count: "1200+", desc: "Premium Assets" },
+                  { icon: <Camera className="w-6 h-6" />, title: "HDRI SKIES", count: "85+", desc: "Premium Assets" },
+                  { icon: <BookOpen className="w-6 h-6" />, title: "D5 PRESETS", count: "200+", desc: "Premium Assets" },
+                ].map((category, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                    className="bg-[#0A0A0A] border border-[#1A1A1A] rounded-2xl p-6 md:p-8 text-center group hover:border-[#F27D26]/30 transition-all"
+                  >
+                    <div className="w-14 h-14 md:w-16 md:h-16 mx-auto mb-4 rounded-xl bg-black border border-[#1A1A1A] flex items-center justify-center text-[#F27D26] group-hover:scale-110 transition-transform">
+                      {category.icon}
+                    </div>
+                    <h3 className="text-lg md:text-xl font-black uppercase tracking-tighter italic mb-1">{category.title}</h3>
+                    <p className="text-[9px] text-[#666] uppercase tracking-widest font-bold mb-6">{category.count} {category.desc}</p>
+                    <button className="w-full py-3 bg-black border border-[#1A1A1A] rounded-lg text-[10px] font-black uppercase tracking-[0.2em] hover:bg-[#F27D26] hover:text-black hover:border-[#F27D26] transition-all">
+                      COMING SOON
+                    </button>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Weekly Asset Drop */}
+              <div className="bg-[#0A0A0A] border border-[#1A1A1A] rounded-3xl p-6 md:p-8">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                  <div className="text-center md:text-left">
+                    <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic mb-2">WEEKLY ASSET DROP</h3>
+                    <p className="text-sm text-[#666]">Get the latest high-quality textures and models delivered to your dashboard every Monday.</p>
+                  </div>
+                  <div className="flex items-center gap-3 w-full md:w-auto">
+                    <input
+                      type="email"
+                      placeholder="ENTER EMAIL"
+                      className="flex-1 md:w-64 px-4 py-3 bg-black border border-[#1A1A1A] rounded-xl text-sm text-white placeholder-[#444] focus:outline-none focus:border-[#F27D26]/50 uppercase tracking-wider"
+                    />
+                    <button className="px-6 py-3 bg-[#F27D26] text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#FF8C37] transition-all whitespace-nowrap">
+                      SUBSCRIBE
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          ) : null}
         </AnimatePresence>
       </main>
 

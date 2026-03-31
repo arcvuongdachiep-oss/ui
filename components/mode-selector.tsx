@@ -1,36 +1,45 @@
 "use client";
 
 import { motion } from "motion/react";
-import { ShieldCheck, Zap, Film, ArrowRight } from "lucide-react";
+import { ShieldCheck, Zap, Film, LayoutGrid, ArrowRight } from "lucide-react";
 import type { ModeId, ModeConfig } from "@/lib/types";
 
 export const MODES: ModeConfig[] = [
   {
     id: "strict",
     title: "STRICT MODE",
-    subtitle: "LOCK FORM ABSOLUTELY",
+    subtitle: "KHOA FORM TUYET DOI",
     description:
-      "Preserve 100% massing and camera angle from Sketchup/Revit. Only apply materials and lighting.",
+      "Bao toan 100% hinh khoi va goc nhin tu Sketchup/Revit. Chi dap vat lieu va anh sang.",
     icon: <ShieldCheck className="w-6 h-6" />,
     color: "#10B981",
   },
   {
     id: "creative",
     title: "CREATIVE MODE",
-    subtitle: "CONTROLLED TRANSFORMATION",
+    subtitle: "BIEN DOI CO KIEM SOAT",
     description:
-      "Keep the original spirit but allow geometry cleanup and facade optimization.",
+      "Giu tinh than goc nhung cho phep lam sach hinh khoi va toi uu facade.",
     icon: <Zap className="w-6 h-6" />,
     color: "#F59E0B",
   },
   {
     id: "cinematic",
     title: "CINEMATIC MODE",
-    subtitle: "DRAMATIC TRANSFORMATION",
+    subtitle: "BIEN DOI MANH - BAN CAM XUC",
     description:
-      "Transform the building into a cinematic film still with storytelling lighting.",
+      "Bien cong trinh thanh mot shot hinh dien anh kich tinh voi anh sang ke chuyen.",
     icon: <Film className="w-6 h-6" />,
     color: "#EF4444",
+  },
+  {
+    id: "random",
+    title: "RANDOM ANGLE",
+    subtitle: "PHAT TRIEN GOC NGAU NHIEN",
+    description:
+      "Tu dong tao ra cac goc nhin da dang: Trung canh, Can canh va Cinematic tu mot file goc.",
+    icon: <LayoutGrid className="w-6 h-6" />,
+    color: "#8B5CF6",
   },
 ];
 
@@ -67,7 +76,7 @@ export function ModeSelector({ onSelectMode }: ModeSelectorProps) {
         </motion.p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {MODES.map((mode, index) => (
           <motion.button
             key={mode.id}

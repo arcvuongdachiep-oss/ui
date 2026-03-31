@@ -25,7 +25,7 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 // Initialize Gemini API (will be validated per request)
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 
-type ModeId = 'strict' | 'creative' | 'cinematic';
+type ModeId = 'strict' | 'creative' | 'cinematic' | 'random';
 
 interface ModeConfig {
   id: ModeId;
@@ -74,6 +74,19 @@ const MODES: ModeConfig[] = [
       BẢN CHẤT OUTPUT: Một "film still kiến trúc". Ánh sáng dẫn dắt mắt nhìn, không khí tạo chiều sâu.
       YÊU CẦU PROMPT: Chủ đề (storytelling), Vật liệu phục vụ mood, Ánh sáng cinematic kịch tính, Camera góc điện ảnh (DOF, lens), Môi trường hiệu ứng.
       THAM SỐ BẮT BUỘC: "cinematic lighting with dramatic contrast", "volumetric light rays and atmospheric depth", "moody environment with strong storytelling", "film still composition, emotional impact", "dynamic shadows and reflective surfaces"
+    `
+  },
+  {
+    id: 'random',
+    title: 'RANDOM ANGLE',
+    instruction: `
+      🎲 TRƯỜNG HỢP 4 – RANDOM ANGLE (PHÁT TRIỂN GÓC NGẪU NHIÊN)
+      ĐẶC TÍNH: Bạn là một Nhiếp ảnh gia kiến trúc chuyên nghiệp.
+      NHIỆM VỤ: Tạo ra 3 bộ prompt khác nhau cho cùng một công trình:
+      - GÓC 1: Trung cảnh (Medium Shot) - Cân bằng giữa kiến trúc và môi trường.
+      - GÓC 2: Cận cảnh (Close-up) - Đặc tả vật liệu và chi tiết tinh xảo.
+      - GÓC 3: Cinematic - Góc nhìn đầy cảm xúc, ánh sáng nghệ thuật, chiều sâu trường ảnh (DOF).
+      YÊU CẦU: Trình bày rõ ràng 3 góc này trong kết quả.
     `
   }
 ];
@@ -198,8 +211,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const sanitizedRefImage = sanitizeBase64Image(refImage);
-    if (!sanitizedRefImage) {
+    // Reference image is optional for random mode
+    const isRandomMode = mode === 'random';
+    const sanitizedRefImage = refImage ? sanitizeBase64Image(refImage) : null;
+    if (!isRandomMode && !sanitizedRefImage) {
       return NextResponse.json(
         { error: "Invalid reference image" },
         { status: 400 }
@@ -234,7 +249,7 @@ export async function POST(request: NextRequest) {
     }
 
     const model = "gemini-2.5-flash";
-    const base64Ref = sanitizedRefImage.split(',')[1];
+    const base64Ref = sanitizedRefImage ? sanitizedRefImage.split(',')[1] : null;
     const modeConfig = MODES.find(m => m.id === mode);
 
     if (!modeConfig) {
@@ -244,26 +259,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const allResults = [];
+    const allResults: Array<{baseImage: string; prompt: string; vietnamese: string; label?: string}> = [];
 
     for (const baseImg of sanitizedBaseImages) {
       const base64Base = baseImg.split(',')[1];
 
-      const systemInstruction = `
-        BẠN LÀ MỘT ĐẠO DIỄN HÌNH ẢNH (DoP) CHUYÊN VỀ DIỄN HỌA KIẾN TRÚC. 
-        NHIỆM VỤ: TẠO RA PROMPT DUY NHẤT DỰA TRÊN ẢNH BASE VÀ ẢNH STYLE THEO KỊCH BẢN SAU:
-
-        ${modeConfig.instruction}
-
-        ĐỊNH DẠNG TRẢ VỀ JSON:
-        {
-          "prompt": "...",
-          "vietnamese": "..."
-        }
-      `;
-
-
-      
       const geminiModel = genAI.getGenerativeModel({ 
         model: model,
         generationConfig: {
@@ -271,27 +271,97 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      const response = await geminiModel.generateContent([
-        { text: systemInstruction },
-        { inlineData: { mimeType: "image/png", data: base64Base } },
-        { inlineData: { mimeType: "image/png", data: base64Ref } },
-        { text: `Phân tích và trả về prompt cho chế độ ${modeConfig.title} dưới dạng JSON.` }
-      ]);
+      if (isRandomMode) {
+        // Random mode: generate 3 different angles
+        const systemInstruction = `
+          BẠN LÀ MỘT ĐẠO DIỄN HÌNH ẢNH (DoP) CHUYÊN VỀ DIỄN HỌA KIẾN TRÚC. 
+          NHIỆM VỤ: TẠO RA 3 BỘ PROMPT KHÁC NHAU (TRUNG CẢNH, CẬN CẢNH, CINEMATIC) DỰA TRÊN ẢNH BASE.
+          ${base64Ref ? 'Sử dụng ảnh Style để lấy phong cách, ánh sáng và vật liệu.' : 'Vì không có ảnh Style, hãy tự đề xuất phong cách, ánh sáng và vật liệu chuyên nghiệp, sang trọng và thực tế nhất cho công trình.'}
 
-      const responseText = response.response.text();
-      
-      let data;
-      try {
-        data = JSON.parse(responseText || "{}");
-      } catch {
-        // If JSON parsing fails, try to extract from response
-        data = { prompt: responseText, vietnamese: "" };
+          ${modeConfig.instruction}
+
+          ĐỊNH DẠNG TRẢ VỀ JSON LÀ MỘT MẢNG GỒM 3 ĐỐI TƯỢNG:
+          [
+            { "label": "Medium Shot", "prompt": "...", "vietnamese": "..." },
+            { "label": "Close-up", "prompt": "...", "vietnamese": "..." },
+            { "label": "Cinematic", "prompt": "...", "vietnamese": "..." }
+          ]
+        `;
+
+        const parts: Array<{text: string} | {inlineData: {mimeType: string; data: string}}> = [
+          { text: systemInstruction },
+          { inlineData: { mimeType: "image/png", data: base64Base } }
+        ];
+
+        if (base64Ref) {
+          parts.push({ inlineData: { mimeType: "image/png", data: base64Ref } });
+        }
+
+        parts.push({ text: `Phân tích và trả về 3 prompt cho chế độ ${modeConfig.title} dưới dạng JSON array.` });
+
+        const response = await geminiModel.generateContent(parts);
+        const responseText = response.response.text();
+        
+        try {
+          const data = JSON.parse(responseText || "[]");
+          if (Array.isArray(data)) {
+            data.forEach((item: {label?: string; prompt?: string; vietnamese?: string}) => {
+              allResults.push({
+                baseImage: baseImg,
+                prompt: item.prompt || "",
+                vietnamese: item.vietnamese || "",
+                label: item.label
+              });
+            });
+          }
+        } catch {
+          allResults.push({
+            baseImage: baseImg,
+            prompt: responseText || "",
+            vietnamese: ""
+          });
+        }
+      } else {
+        // Standard modes: generate single prompt
+        const systemInstruction = `
+          BẠN LÀ MỘT ĐẠO DIỄN HÌNH ẢNH (DoP) CHUYÊN VỀ DIỄN HỌA KIẾN TRÚC. 
+          NHIỆM VỤ: TẠO RA PROMPT DUY NHẤT DỰA TRÊN ẢNH BASE VÀ ẢNH STYLE THEO KỊCH BẢN SAU:
+
+          ${modeConfig.instruction}
+
+          ĐỊNH DẠNG TRẢ VỀ JSON:
+          {
+            "prompt": "...",
+            "vietnamese": "..."
+          }
+        `;
+
+        const parts: Array<{text: string} | {inlineData: {mimeType: string; data: string}}> = [
+          { text: systemInstruction },
+          { inlineData: { mimeType: "image/png", data: base64Base } }
+        ];
+
+        if (base64Ref) {
+          parts.push({ inlineData: { mimeType: "image/png", data: base64Ref } });
+        }
+
+        parts.push({ text: `Phân tích và trả về prompt cho chế độ ${modeConfig.title} dưới dạng JSON.` });
+
+        const response = await geminiModel.generateContent(parts);
+        const responseText = response.response.text();
+        
+        let data;
+        try {
+          data = JSON.parse(responseText || "{}");
+        } catch {
+          data = { prompt: responseText, vietnamese: "" };
+        }
+        allResults.push({
+          baseImage: baseImg,
+          prompt: data.prompt || "",
+          vietnamese: data.vietnamese || ""
+        });
       }
-      allResults.push({
-        baseImage: baseImg,
-        prompt: data.prompt || "",
-        vietnamese: data.vietnamese || ""
-      });
     }
 
     // Deduct credits after successful generation (if not Pro)
