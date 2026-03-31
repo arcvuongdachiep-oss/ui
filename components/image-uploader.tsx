@@ -205,7 +205,7 @@ export function ImageUploader({
           {/* Style Image */}
           <div className="space-y-3">
             <label className="text-[9px] md:text-[10px] uppercase tracking-wider text-[#666] font-bold">
-              2. Style Reference (Skin)
+              2. Style Reference (Skin) {selectedMode === 'random' && <span className="text-[#F27D26] lowercase italic">(optional)</span>}
             </label>
             <motion.div
               whileHover={{ scale: 1.01 }}
@@ -304,9 +304,9 @@ export function ImageUploader({
             whileHover={!isButtonDisabled && !loading ? { scale: 1.02 } : {}}
             whileTap={!isButtonDisabled && !loading ? { scale: 0.98 } : {}}
             onClick={onGenerate}
-            disabled={baseImages.length === 0 || !refImage || loading || isOptimizing || isButtonDisabled}
+            disabled={baseImages.length === 0 || (selectedMode !== 'random' && !refImage) || loading || isOptimizing || isButtonDisabled}
             className={`w-full py-4 rounded-xl font-black uppercase tracking-[0.15em] md:tracking-[0.2em] text-[11px] md:text-[12px] flex items-center justify-center gap-3 transition-all relative overflow-hidden ${
-              baseImages.length === 0 || !refImage || loading || isOptimizing || isButtonDisabled
+              baseImages.length === 0 || (selectedMode !== 'random' && !refImage) || loading || isOptimizing || isButtonDisabled
                 ? "bg-[#111] text-[#333] cursor-not-allowed"
                 : "bg-[#F27D26] text-black hover:bg-[#FF8C37] shadow-[0_0_30px_rgba(242,125,38,0.3)]"
             }`}

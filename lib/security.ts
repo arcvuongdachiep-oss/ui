@@ -100,8 +100,8 @@ export function sanitizeBase64Image(input: unknown): string | null {
 }
 
 // Validate mode ID
-export function validateModeId(mode: unknown): mode is "strict" | "creative" | "cinematic" {
-  return typeof mode === "string" && ["strict", "creative", "cinematic"].includes(mode);
+export function validateModeId(mode: unknown): mode is "strict" | "creative" | "cinematic" | "random" {
+  return typeof mode === "string" && ["strict", "creative", "cinematic", "random"].includes(mode);
 }
 
 // Rate limit check for sensitive operations

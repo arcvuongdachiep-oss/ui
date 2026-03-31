@@ -92,7 +92,7 @@ export function ResultsPanel({
                   </div>
                   <div>
                     <h4 className="text-[11px] md:text-[12px] font-black uppercase tracking-widest text-[#F27D26]">
-                      Result #{idx + 1}
+                      {res.label ? res.label : `Result #${idx + 1}`}
                     </h4>
                     <p className="text-[8px] md:text-[9px] text-[#444] uppercase tracking-widest font-bold">
                       {modeConfig?.title}

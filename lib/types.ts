@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 
-export type ModeId = 'strict' | 'creative' | 'cinematic';
+export type ModeId = 'strict' | 'creative' | 'cinematic' | 'random';
+
+export type TabId = 'ai-prompt' | 'd5-tutorial' | 'showcase' | 'library';
 
 export interface ModeConfig {
   id: ModeId;
@@ -15,4 +17,5 @@ export interface PromptResult {
   baseImage: string;
   prompt: string;
   vietnamese: string;
+  label?: string;
 }
