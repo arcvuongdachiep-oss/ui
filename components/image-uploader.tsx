@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   X,
@@ -24,8 +25,8 @@ interface ImageUploaderProps {
   refImage: string | null;
   loading: boolean;
   isOptimizing: boolean;
-  optimizingIndices?: number[]; // Track which base images are still optimizing
-  isRefOptimizing?: boolean; // Track if ref image is optimizing
+  optimizingIndices?: number[];
+  isRefOptimizing?: boolean;
   tokenEstimate: TokenEstimate | null;
   savings: number;
   progress?: number;
@@ -62,6 +63,60 @@ export function ImageUploader({
   onRemoveRef,
   onGenerate,
 }: ImageUploaderProps) {
+  const [isDraggingBase, setIsDraggingBase] = useState(false);
+  const [isDraggingRef, setIsDraggingRef] = useState(false);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleBaseDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingBase(true);
+  }, []);
+
+  const handleBaseDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingBase(false);
+  }, []);
+
+  const handleBaseDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingBase(false);
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const fakeEvent = { target: { files } } as unknown as React.ChangeEvent<HTMLInputElement>;
+      onBaseUpload(fakeEvent);
+    }
+  }, [onBaseUpload]);
+
+  const handleRefDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingRef(true);
+  }, []);
+
+  const handleRefDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingRef(false);
+  }, []);
+
+  const handleRefDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingRef(false);
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const fakeEvent = { target: { files } } as unknown as React.ChangeEvent<HTMLInputElement>;
+      onRefUpload(fakeEvent);
+    }
+  }, [onRefUpload]);
+
   return (
     <div className="lg:col-span-4 xl:col-span-3 space-y-6">
       <motion.div
@@ -111,13 +166,21 @@ export function ImageUploader({
         </motion.div>
 
         <div className="space-y-6">
-          {/* Base Images */}
+          {/* Base Images with Drag & Drop */}
           <div className="space-y-3">
             <label className="text-[9px] md:text-[10px] uppercase tracking-wider text-[#666] font-bold flex items-center justify-between">
               <span>1. Base Images</span>
               <span className="text-[#F27D26]">{baseImages.length}/4</span>
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div 
+              className={`grid grid-cols-2 gap-2 p-2 -m-2 rounded-xl transition-all ${
+                isDraggingBase ? 'bg-[#F27D26]/10 border-2 border-dashed border-[#F27D26]' : ''
+              }`}
+              onDragOver={handleDragOver}
+              onDragEnter={handleBaseDragEnter}
+              onDragLeave={handleBaseDragLeave}
+              onDrop={handleBaseDrop}
+            >
               <AnimatePresence mode="popLayout">
                 {baseImages.map((img, idx) => {
                   const isThisOptimizing = optimizingIndices.includes(idx);
@@ -137,7 +200,6 @@ export function ImageUploader({
                           isThisOptimizing ? "blur-sm scale-105" : ""
                         }`}
                       />
-                      {/* Optimizing overlay */}
                       {isThisOptimizing && (
                         <motion.div
                           initial={{ opacity: 0 }}
@@ -163,7 +225,6 @@ export function ImageUploader({
                       <span className="absolute bottom-2 left-2 text-[8px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
                         #{idx + 1}
                       </span>
-                      {/* Optimized badge - only show when done */}
                       {!isThisOptimizing && (
                         <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-emerald-500/80 text-[6px] font-bold uppercase rounded text-black">
                           720p
@@ -177,7 +238,9 @@ export function ImageUploader({
                 <motion.label
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="aspect-square border-2 border-dashed border-[#222] rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-[#F27D26]/50 hover:bg-[#F27D26]/5 transition-all group"
+                  className={`aspect-square border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all group ${
+                    isDraggingBase ? 'border-[#F27D26] bg-[#F27D26]/10' : 'border-[#222] hover:border-[#F27D26]/50 hover:bg-[#F27D26]/5'
+                  }`}
                 >
                   {isOptimizing ? (
                     <Loader2 className="w-6 h-6 text-[#F27D26] animate-spin" />
@@ -202,7 +265,7 @@ export function ImageUploader({
             </div>
           </div>
 
-          {/* Style Image */}
+          {/* Style Image with Drag & Drop */}
           <div className="space-y-3">
             <label className="text-[9px] md:text-[10px] uppercase tracking-wider text-[#666] font-bold">
               2. Style Reference (Skin) {selectedMode === 'random' && <span className="text-[#F27D26] lowercase italic">(optional)</span>}
@@ -210,10 +273,16 @@ export function ImageUploader({
             <motion.div
               whileHover={{ scale: 1.01 }}
               className={`relative aspect-video border-2 border-dashed rounded-xl transition-all group overflow-hidden ${
-                refImage
+                isDraggingRef
+                  ? "border-[#F27D26] bg-[#F27D26]/10"
+                  : refImage
                   ? "border-[#F27D26]/40"
                   : "border-[#222] hover:border-[#F27D26]/30"
               }`}
+              onDragOver={handleDragOver}
+              onDragEnter={handleRefDragEnter}
+              onDragLeave={handleRefDragLeave}
+              onDrop={handleRefDrop}
             >
               {refImage ? (
                 <>
@@ -224,7 +293,6 @@ export function ImageUploader({
                       isRefOptimizing ? "blur-sm scale-105" : ""
                     }`}
                   />
-                  {/* Optimizing overlay */}
                   {isRefOptimizing && (
                     <motion.div
                       initial={{ opacity: 0 }}
@@ -249,7 +317,6 @@ export function ImageUploader({
                       </span>
                     </button>
                   )}
-                  {/* Optimized badge - only show when done */}
                   {!isRefOptimizing && (
                     <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-emerald-500/80 text-[6px] font-bold uppercase rounded text-black">
                       720p
@@ -257,7 +324,9 @@ export function ImageUploader({
                   )}
                 </>
               ) : (
-                <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer hover:bg-[#F27D26]/5 transition-colors">
+                <label className={`flex flex-col items-center justify-center w-full h-full cursor-pointer transition-colors ${
+                  isDraggingRef ? 'bg-[#F27D26]/10' : 'hover:bg-[#F27D26]/5'
+                }`}>
                   {isOptimizing ? (
                     <Loader2 className="w-8 h-8 text-[#F27D26] animate-spin" />
                   ) : (
@@ -283,7 +352,6 @@ export function ImageUploader({
 
         {/* Generate Button with Progress */}
         <div className="space-y-3">
-          {/* Progress Bar */}
           {loading && progress > 0 && (
             <div className="space-y-2">
               <div className="h-1.5 bg-[#1A1A1A] rounded-full overflow-hidden">
@@ -327,7 +395,6 @@ export function ImageUploader({
             )}
           </motion.button>
           
-          {/* Credit Cost & Rate Limit Info */}
           <div className="flex items-center justify-center gap-3 text-[10px] text-[#666]">
             {baseImages.length > 0 && !cooldownTime && (
               <div className="flex items-center gap-1.5">
@@ -348,7 +415,6 @@ export function ImageUploader({
           </div>
         </div>
 
-        {/* Token Estimate Display */}
         <TokenDisplay 
           estimate={tokenEstimate} 
           savings={savings} 
