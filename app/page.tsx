@@ -830,6 +830,40 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* D5 Pro Features Section */}
+              <div className="space-y-8">
+                <div className="text-center space-y-4">
+                  <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic leading-none text-[#F27D26]">Tính năng phiên bản D5 Render Pro</h2>
+                  <p className="text-[#444] uppercase tracking-[0.3em] md:tracking-[0.4em] text-[8px] md:text-[9px] font-bold">Danh sách các tính năng cao cấp trong phiên bản Pro</p>
+                </div>
+                <div className="bg-[#0A0A0A] border border-[#1A1A1A] rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                  <div className="aspect-video w-full">
+                    <iframe 
+                      className="w-full h-full"
+                      src="https://www.youtube.com/embed/videoseries?list=PLAxnVKb5XqwUY5mDoktLsCq5jSI6GiYWS" 
+                      title="D5 Render Pro Features" 
+                      frameBorder="0" 
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                      allowFullScreen
+                    />
+                  </div>
+                  <div className="p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 bg-gradient-to-r from-[#0A0A0A] to-[#0D0D0D]">
+                    <div className="space-y-1 text-center md:text-left">
+                      <h3 className="text-lg md:text-xl font-black uppercase tracking-tighter italic">Tìm hiểu tính năng cao cấp</h3>
+                      <p className="text-xs text-[#666]">Xem danh sách phát tính năng D5 Render Pro để phát triển kỹ năng rendering.</p>
+                    </div>
+                    <a 
+                      href="https://youtube.com/playlist?list=PLAxnVKb5XqwUY5mDoktLsCq5jSI6GiYWS" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="px-6 md:px-8 py-3 md:py-4 bg-[#F27D26] text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#FF8C37] transition-all shadow-[0_0_20px_rgba(242,125,38,0.2)] whitespace-nowrap"
+                    >
+                      Xem playlist
+                    </a>
+                  </div>
+                </div>
+              </div>
+
               {/* D5 Masterclass Section */}
               <div className="space-y-8">
                 <div className="text-center space-y-4">

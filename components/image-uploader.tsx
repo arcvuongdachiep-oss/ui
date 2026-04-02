@@ -150,7 +150,7 @@ export function ImageUploader({
             className="p-2 rounded-lg"
             style={{
               color: modeConfig?.color,
-              backgroundColor: \`\${modeConfig?.color}15\`,
+              backgroundColor: `${modeConfig?.color}15`,
             }}
           >
             {modeConfig?.icon}
@@ -173,9 +173,9 @@ export function ImageUploader({
               <span className="text-[#F27D26]">{baseImages.length}/4</span>
             </label>
             <div 
-              className={\`grid grid-cols-2 gap-2 p-2 -m-2 rounded-xl transition-all \${
+              className={`grid grid-cols-2 gap-2 p-2 -m-2 rounded-xl transition-all ${
                 isDraggingBase ? 'bg-[#F27D26]/10 border-2 border-dashed border-[#F27D26]' : ''
-              }\`}
+              }`}
               onDragOver={handleDragOver}
               onDragEnter={handleBaseDragEnter}
               onDragLeave={handleBaseDragLeave}
@@ -195,10 +195,10 @@ export function ImageUploader({
                     >
                       <img
                         src={img}
-                        alt={\`Base \${idx}\`}
-                        className={\`w-full h-full object-cover transition-all duration-300 \${
+                        alt={`Base ${idx}`}
+                        className={`w-full h-full object-cover transition-all duration-300 ${
                           isThisOptimizing ? "blur-sm scale-105" : ""
-                        }\`}
+                        }`}
                       />
                       {isThisOptimizing && (
                         <motion.div
@@ -216,9 +216,9 @@ export function ImageUploader({
                       <button
                         onClick={() => onRemoveBase(idx)}
                         disabled={isThisOptimizing}
-                        className={\`absolute top-2 right-2 bg-black/60 p-1.5 rounded-lg transition-all hover:bg-red-500 hover:scale-110 \${
+                        className={`absolute top-2 right-2 bg-black/60 p-1.5 rounded-lg transition-all hover:bg-red-500 hover:scale-110 ${
                           isThisOptimizing ? "hidden" : "opacity-0 group-hover:opacity-100"
-                        }\`}
+                        }`}
                       >
                         <X size={12} />
                       </button>
@@ -238,9 +238,9 @@ export function ImageUploader({
                 <motion.label
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className={\`aspect-square border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all group \${
+                  className={`aspect-square border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all group ${
                     isDraggingBase ? 'border-[#F27D26] bg-[#F27D26]/10' : 'border-[#222] hover:border-[#F27D26]/50 hover:bg-[#F27D26]/5'
-                  }\`}
+                  }`}
                 >
                   {isOptimizing ? (
                     <Loader2 className="w-6 h-6 text-[#F27D26] animate-spin" />
@@ -272,13 +272,13 @@ export function ImageUploader({
             </label>
             <motion.div
               whileHover={{ scale: 1.01 }}
-              className={\`relative aspect-video border-2 border-dashed rounded-xl transition-all group overflow-hidden \${
+              className={`relative aspect-video border-2 border-dashed rounded-xl transition-all group overflow-hidden ${
                 isDraggingRef
                   ? "border-[#F27D26] bg-[#F27D26]/10"
                   : refImage
                   ? "border-[#F27D26]/40"
                   : "border-[#222] hover:border-[#F27D26]/30"
-              }\`}
+              }`}
               onDragOver={handleDragOver}
               onDragEnter={handleRefDragEnter}
               onDragLeave={handleRefDragLeave}
@@ -289,9 +289,9 @@ export function ImageUploader({
                   <img
                     src={refImage}
                     alt="Style"
-                    className={\`w-full h-full object-cover transition-all duration-300 \${
+                    className={`w-full h-full object-cover transition-all duration-300 ${
                       isRefOptimizing ? "blur-sm scale-105" : ""
-                    }\`}
+                    }`}
                   />
                   {isRefOptimizing && (
                     <motion.div
@@ -324,9 +324,9 @@ export function ImageUploader({
                   )}
                 </>
               ) : (
-                <label className={\`flex flex-col items-center justify-center w-full h-full cursor-pointer transition-colors \${
+                <label className={`flex flex-col items-center justify-center w-full h-full cursor-pointer transition-colors ${
                   isDraggingRef ? 'bg-[#F27D26]/10' : 'hover:bg-[#F27D26]/5'
-                }\`}>
+                }`}>
                   {isOptimizing ? (
                     <Loader2 className="w-8 h-8 text-[#F27D26] animate-spin" />
                   ) : (
@@ -358,7 +358,7 @@ export function ImageUploader({
                 <motion.div
                   className="h-full bg-gradient-to-r from-[#F27D26] to-yellow-500"
                   initial={{ width: 0 }}
-                  animate={{ width: \`\${progress}%\` }}
+                  animate={{ width: `${progress}%` }}
                   transition={{ duration: 0.3 }}
                 />
               </div>
@@ -373,11 +373,11 @@ export function ImageUploader({
             whileTap={!isButtonDisabled && !loading ? { scale: 0.98 } : {}}
             onClick={onGenerate}
             disabled={baseImages.length === 0 || (selectedMode !== 'random' && !refImage) || loading || isOptimizing || isButtonDisabled}
-            className={\`w-full py-4 rounded-xl font-black uppercase tracking-[0.15em] md:tracking-[0.2em] text-[11px] md:text-[12px] flex items-center justify-center gap-3 transition-all relative overflow-hidden \${
+            className={`w-full py-4 rounded-xl font-black uppercase tracking-[0.15em] md:tracking-[0.2em] text-[11px] md:text-[12px] flex items-center justify-center gap-3 transition-all relative overflow-hidden ${
               baseImages.length === 0 || (selectedMode !== 'random' && !refImage) || loading || isOptimizing || isButtonDisabled
                 ? "bg-[#111] text-[#333] cursor-not-allowed"
                 : "bg-[#F27D26] text-black hover:bg-[#FF8C37] shadow-[0_0_30px_rgba(242,125,38,0.3)]"
-            }\`}
+            }`}
           >
             {loading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -389,7 +389,7 @@ export function ImageUploader({
             {loading ? (
               statusMessage || "Generating..."
             ) : cooldownTime > 0 ? (
-              \`Doi \${Math.floor(cooldownTime / 60)}:\${String(cooldownTime % 60).padStart(2, '0')}\`
+              `Doi ${Math.floor(cooldownTime / 60)}:${String(cooldownTime % 60).padStart(2, '0')}`
             ) : (
               "Generate Prompt"
             )}
