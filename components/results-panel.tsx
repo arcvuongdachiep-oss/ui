@@ -129,7 +129,7 @@ export function ResultsPanel({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.2 }}
-                      className="text-[12px] md:text-[13px] font-mono leading-relaxed text-[#AAA] selection:bg-[#F27D26]/30 whitespace-pre-line"
+                      className="text-[12px] md:text-[13px] font-mono leading-relaxed text-[#AAA] selection:bg-[#F27D26]/30"
                     >
                       {res.prompt}
                     </motion.p>
@@ -162,7 +162,7 @@ export function ResultsPanel({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.3 }}
-                      className="text-[12px] md:text-[13px] leading-relaxed text-[#888] selection:bg-[#F27D26]/30 whitespace-pre-line"
+                      className="text-[12px] md:text-[13px] leading-relaxed text-[#888] selection:bg-[#F27D26]/30"
                       style={{ fontFamily: 'var(--font-vietnamese)' }}
                     >
                       {res.vietnamese}
