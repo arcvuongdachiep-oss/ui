@@ -33,6 +33,8 @@ interface ImageUploaderProps {
   statusMessage?: string;
   isButtonDisabled?: boolean;
   cooldownTime?: number;
+  userDetails: string;
+  onUserDetailsChange: (value: string) => void;
   onBack: () => void;
   onBaseUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRefUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -56,6 +58,8 @@ export function ImageUploader({
   statusMessage = "",
   isButtonDisabled = false,
   cooldownTime = 0,
+  userDetails,
+  onUserDetailsChange,
   onBack,
   onBaseUpload,
   onRefUpload,
@@ -347,6 +351,25 @@ export function ImageUploader({
                 </label>
               )}
             </motion.div>
+          </div>
+
+          {/* User Details Input */}
+          <div className="space-y-3">
+            <label className="text-[9px] md:text-[10px] uppercase tracking-wider text-[#666] font-bold flex items-center justify-between">
+              <span>3. Them chi tiet (Mo khoa)</span>
+              <span className={`${userDetails.length >= 80 ? 'text-red-500' : 'text-[#F27D26]'}`}>{userDetails.length}/80</span>
+            </label>
+            <textarea
+              value={userDetails}
+              onChange={(e) => {
+                if (e.target.value.length <= 80) {
+                  onUserDetailsChange(e.target.value);
+                }
+              }}
+              maxLength={80}
+              placeholder="Vi du: them nguoi chau A, xe co, diem nhan..."
+              className="w-full h-20 px-3 py-2 bg-black border border-[#222] rounded-xl text-[11px] text-[#AAA] placeholder:text-[#444] resize-none focus:outline-none focus:border-[#F27D26]/50 focus:ring-1 focus:ring-[#F27D26]/20 transition-all"
+            />
           </div>
         </div>
 
