@@ -56,6 +56,7 @@ export default function Home() {
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
   const [cooldownTime, setCooldownTime] = useState(0);
+  const [userInstructions, setUserInstructions] = useState("");
   const cooldownRef = useRef<NodeJS.Timeout | null>(null);
 
   // Cleanup cooldown timer
@@ -681,6 +682,8 @@ export default function Home() {
                       statusMessage={statusMessage}
                       isButtonDisabled={isButtonDisabled || optimizingIndices.length > 0 || isRefOptimizing}
                       cooldownTime={cooldownTime}
+                      userInstructions={userInstructions}
+                      onUserInstructionsChange={setUserInstructions}
                       onBack={() => setSelectedMode(null)}
                       onBaseUpload={handleBaseUpload}
                       onRefUpload={handleRefUpload}
