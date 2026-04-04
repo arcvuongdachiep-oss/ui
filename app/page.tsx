@@ -262,6 +262,7 @@ export default function Home() {
           baseImages: optimizedBaseDataUrls,
           refImage: optimizedRefImage?.dataUrl || null,
           mode: selectedMode,
+          userInstructions: userInstructions.trim() || null,
         }),
       });
 
