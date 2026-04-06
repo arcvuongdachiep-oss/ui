@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export type ModeId = 'strict' | 'creative' | 'cinematic' | 'random';
+export type ModeId = 'strict' | 'creative' | 'cinematic' | 'random' | 'masterplan';
 
 export type TabId = 'ai-prompt' | 'd5-tutorial' | 'showcase' | 'library';
 
