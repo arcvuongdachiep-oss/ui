@@ -59,12 +59,60 @@ export function MasterPlanComponent({
   const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  const handleFileUpload = (setter: (val: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Compress image to 720p max dimension with JPEG quality 0.8
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const img = new window.Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('Could not get canvas context'));
+            return;
+          }
+
+          // Calculate new dimensions (max 720px on longest side)
+          const MAX_SIZE = 720;
+          let { width, height } = img;
+          
+          if (width > MAX_SIZE || height > MAX_SIZE) {
+            if (width > height) {
+              height = Math.round((height / width) * MAX_SIZE);
+              width = MAX_SIZE;
+            } else {
+              width = Math.round((width / height) * MAX_SIZE);
+              height = MAX_SIZE;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Export as JPEG with 0.8 quality
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+          resolve(compressedBase64);
+        };
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = reader.result as string;
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFileUpload = (setter: (val: string) => void) => async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setter(reader.result as string);
-      reader.readAsDataURL(file);
+      try {
+        const compressedImage = await compressImage(file);
+        setter(compressedImage);
+      } catch (err) {
+        console.error('Error compressing image:', err);
+        setError('Khong the xu ly hinh anh. Vui long thu lai.');
+      }
     }
   };
 
