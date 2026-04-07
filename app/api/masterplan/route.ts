@@ -81,10 +81,26 @@ export async function POST(request: NextRequest) {
 
     let result;
 
+    // Helper to extract pure base64 data from data URL
+    const extractBase64 = (dataUrl: string | null): string | null => {
+      if (!dataUrl) return null;
+      const parts = dataUrl.split(',');
+      return parts.length > 1 ? parts[1] : dataUrl;
+    };
+
     if (type === 'midshot') {
       // Analyze project zones - 5 mid-shot prompts
-      const base64MasterPlan = sanitizeBase64Image(masterPlan);
-      const base64Perspective = sanitizeBase64Image(perspective);
+      const sanitizedMasterPlan = sanitizeBase64Image(masterPlan);
+      const sanitizedPerspective = sanitizeBase64Image(perspective);
+      const base64MasterPlan = extractBase64(sanitizedMasterPlan);
+      const base64Perspective = extractBase64(sanitizedPerspective);
+
+      if (!base64MasterPlan || !base64Perspective) {
+        return withCorsHeaders(
+          NextResponse.json({ error: "Invalid image data format" }, { status: 400 }),
+          request
+        );
+      }
 
       const systemInstruction = `
         BẠN LÀ MỘT CHUYÊN GIA QUY HOẠCH VÀ DIỄN HỌA KIẾN TRÚC.
@@ -142,7 +158,15 @@ export async function POST(request: NextRequest) {
 
     } else if (type === 'detailed') {
       // Generate detailed prompts (closeup, cinematic, eye-level)
-      const base64MidShot = sanitizeBase64Image(midShotImage);
+      const sanitizedMidShot = sanitizeBase64Image(midShotImage);
+      const base64MidShot = extractBase64(sanitizedMidShot);
+
+      if (!base64MidShot) {
+        return withCorsHeaders(
+          NextResponse.json({ error: "Invalid image data format" }, { status: 400 }),
+          request
+        );
+      }
 
       const systemInstruction = `
         BẠN LÀ MỘT ĐẠO DIỄN HÌNH ẢNH KIẾN TRÚC CHUYÊN NGHIỆP.
