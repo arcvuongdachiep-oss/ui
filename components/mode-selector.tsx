@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { ShieldCheck, Zap, Film, LayoutGrid, ArrowRight, Building2 } from "lucide-react";
+import { ShieldCheck, Zap, Film, LayoutGrid, ArrowRight } from "lucide-react";
 import type { ModeId, ModeConfig } from "@/lib/types";
 
 export const MODES: ModeConfig[] = [
@@ -40,15 +40,6 @@ export const MODES: ModeConfig[] = [
       "Tu dong tao ra cac goc nhin da dang: Trung canh, Can canh va Cinematic tu mot file goc.",
     icon: <LayoutGrid className="w-6 h-6" />,
     color: "#8B5CF6",
-  },
-  {
-    id: "masterplan",
-    title: "PHAT TRIEN QUY HOACH",
-    subtitle: "MASTER PLAN DEVELOPMENT",
-    description:
-      "Phan tich mat bang tong the, chia du an thanh 5 phan khu va tao prompt cho tung khu vuc.",
-    icon: <Building2 className="w-6 h-6" />,
-    color: "#06B6D4",
   },
 ];
 
