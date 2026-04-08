@@ -118,8 +118,8 @@ export function MasterPlanComponent({
 
   const onAnalyzeMidShot = async () => {
     if (!masterPlan || !perspective) return;
-    if (credits < 1) {
-      setError("Ban da het credit. Vui long nang cap tai khoan.");
+    if (credits < 3) {
+      setError("Ban can it nhat 3 Credits de thuc hien phan tich. Vui long nang cap tai khoan.");
       return;
     }
     setIsAnalyzing(true);
@@ -127,8 +127,9 @@ export function MasterPlanComponent({
     try {
       const results = await onAnalyze(masterPlan, perspective, 'midshot');
       setMidShotResults(results);
-    } catch (err) {
-      setError("Khong the phan tich hinh anh. Vui long thu lai.");
+    } catch (err: any) {
+      const errorMessage = err?.message || "Khong the phan tich hinh anh. Vui long thu lai.";
+      setError(errorMessage);
       console.error(err);
     } finally {
       setIsAnalyzing(false);
@@ -137,8 +138,8 @@ export function MasterPlanComponent({
 
   const onAnalyzeDetailedPrompts = async () => {
     if (!midShotImage) return;
-    if (credits < 1) {
-      setError("Ban da het credit. Vui long nang cap tai khoan.");
+    if (credits < 3) {
+      setError("Ban can it nhat 3 Credits de thuc hien phan tich. Vui long nang cap tai khoan.");
       return;
     }
     setIsAnalyzing(true);
@@ -146,8 +147,9 @@ export function MasterPlanComponent({
     try {
       const results = await onAnalyzeDetailed(midShotImage);
       setDetailedResults(results);
-    } catch (err) {
-      setError("Khong the tao prompt chi tiet. Vui long thu lai.");
+    } catch (err: any) {
+      const errorMessage = err?.message || "Khong the tao prompt chi tiet. Vui long thu lai.";
+      setError(errorMessage);
       console.error(err);
     } finally {
       setIsAnalyzing(false);
@@ -213,9 +215,13 @@ export function MasterPlanComponent({
           </div>
         )}
 
-        <div className="mt-auto pt-4 border-t border-[#1A1A1A]">
+        <div className="mt-auto pt-4 border-t border-[#1A1A1A] space-y-3">
+          <div className="flex items-center justify-between p-2 bg-[#0A0A0A] border border-[#1A1A1A] rounded-lg">
+            <span className="text-[9px] uppercase tracking-wider text-[#666] font-bold">Credits con lai</span>
+            <span className="text-[12px] font-black text-[#06B6D4]">{credits}</span>
+          </div>
           <p className="text-[9px] text-[#444] leading-relaxed">
-            He thong su dung Gemini AI de phan tich cau truc va de xuat y tuong dien hoa chuyen sau.
+            He thong su dung Gemini AI de phan tich cau truc va de xuat y tuong dien hoa chuyen sau. Moi lan phan tich tru 3 Credits.
           </p>
         </div>
       </aside>

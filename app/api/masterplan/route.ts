@@ -77,6 +77,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get user profile to check credits
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("credits, role")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError || !profile) {
+      return withCorsHeaders(
+        NextResponse.json({ error: "Không tìm thấy thông tin người dùng" }, { status: 404 }),
+        request
+      );
+    }
+
+    // Check credits (Pro users have unlimited, masterplan costs 3 credits per analysis)
+    const CREDIT_COST = 3;
+    const isPro = profile.role === "pro";
+    if (!isPro && profile.credits < CREDIT_COST) {
+      return withCorsHeaders(
+        NextResponse.json({
+          error: `Bạn cần ${CREDIT_COST} lượt để thực hiện, nhưng chỉ còn ${profile.credits} lượt. Vui lòng nâng cấp Pro.`,
+          needUpgrade: true,
+          required: CREDIT_COST,
+          available: profile.credits,
+        }, { status: 400 }),
+        request
+      );
+    }
+
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     let result;
@@ -224,20 +253,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Deduct credit
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({ credits: profile.credits - 1 })
-      .eq("id", user.id);
+    // Deduct credits after successful generation (if not Pro)
+    let remainingCredits = profile.credits;
+    if (!isPro) {
+      const { data: deductResult, error: deductError } = await supabase.rpc("deduct_credits", {
+        p_user_id: user.id,
+        p_amount: CREDIT_COST,
+      });
 
-    if (updateError) {
-      console.error("Failed to deduct credit:", updateError);
+      if (!deductError) {
+        remainingCredits = deductResult?.[0]?.remaining_credits ?? (profile.credits - CREDIT_COST);
+      }
     }
 
     return withCorsHeaders(
       NextResponse.json({
         success: true,
         data: result,
+        creditsUsed: isPro ? 0 : CREDIT_COST,
+        creditsRemaining: isPro ? -1 : remainingCredits,
+        isPro,
         creditsRemaining: profile.credits - 1,
       }),
       request
