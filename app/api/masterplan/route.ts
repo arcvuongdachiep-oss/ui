@@ -8,8 +8,7 @@ import {
   sanitizeBase64Image,
 } from "@/lib/security";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
+const genAI = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
 
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
@@ -102,6 +101,13 @@ export async function POST(request: NextRequest) {
           required: CREDIT_COST,
           available: profile.credits,
         }, { status: 400 }),
+        request
+      );
+    }
+
+    if (!genAI) {
+      return withCorsHeaders(
+        NextResponse.json({ error: "Gemini API not configured" }, { status: 500 }),
         request
       );
     }
@@ -273,7 +279,6 @@ export async function POST(request: NextRequest) {
         creditsUsed: isPro ? 0 : CREDIT_COST,
         creditsRemaining: isPro ? -1 : remainingCredits,
         isPro,
-        creditsRemaining: profile.credits - 1,
       }),
       request
     );
