@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
   try {
     // Check API key
-    if (!genAI || !GEMINI_API_KEY) {
+    if (!genAI) {
       return withCorsHeaders(
         NextResponse.json({ error: "API key not configured" }, { status: 500 }),
         request
