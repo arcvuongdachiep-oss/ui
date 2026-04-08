@@ -9,7 +9,6 @@ import { ModeSelector, MODES } from "@/components/mode-selector";
 import { Camera, Layers, Grid3X3, BookOpen } from "lucide-react";
 import { ImageUploader } from "@/components/image-uploader";
 import { ResultsPanel } from "@/components/results-panel";
-import { MasterPlanComponent, type MidShotPrompt, type DetailedPrompts } from "@/components/master-plan";
 import { 
   optimizeImage, 
   estimateTokens, 
@@ -706,46 +705,6 @@ export default function Home() {
             >
               {!selectedMode ? (
                 <ModeSelector onSelectMode={setSelectedMode} />
-              ) : selectedMode === 'masterplan' ? (
-                <motion.div
-                  key="masterplan-step"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="w-full min-h-[600px]"
-                >
-                  <MasterPlanComponent
-                    onBack={() => setSelectedMode(null)}
-                    onAnalyze={async (masterPlan, perspective) => {
-                      const response = await fetch('/api/masterplan', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ masterPlan, perspective, type: 'midshot' }),
-                      });
-                      const data = await response.json();
-                      if (!response.ok) throw new Error(data.error);
-                      if (data.creditsRemaining !== undefined) {
-                        setUserProfile(prev => prev ? { ...prev, credits: data.creditsRemaining } : null);
-                      }
-                      return data.data;
-                    }}
-                    onAnalyzeDetailed={async (image) => {
-                      const response = await fetch('/api/masterplan', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ midShotImage: image, type: 'detailed' }),
-                      });
-                      const data = await response.json();
-                      if (!response.ok) throw new Error(data.error);
-                      if (data.creditsRemaining !== undefined) {
-                        setUserProfile(prev => prev ? { ...prev, credits: data.creditsRemaining } : null);
-                      }
-                      return data.data;
-                    }}
-                    loading={loading}
-                    credits={userProfile?.credits || 0}
-                  />
-                </motion.div>
               ) : (
                 <motion.div
                   key="step2"
