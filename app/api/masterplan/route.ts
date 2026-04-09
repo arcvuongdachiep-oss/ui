@@ -45,38 +45,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user profile and check credits
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("credits, role")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile || profile.credits < 1) {
-      return withCorsHeaders(
-        NextResponse.json({ error: "Insufficient credits" }, { status: 403 }),
-        request
-      );
-    }
-
-    const body = await request.json();
-    const { masterPlan, perspective, midShotImage, type } = body;
-
-    // Validate inputs
-    if (type === 'midshot' && (!masterPlan || !perspective)) {
-      return withCorsHeaders(
-        NextResponse.json({ error: "masterPlan and perspective images are required" }, { status: 400 }),
-        request
-      );
-    }
-
-    if (type === 'detailed' && !midShotImage) {
-      return withCorsHeaders(
-        NextResponse.json({ error: "midShotImage is required" }, { status: 400 }),
-        request
-      );
-    }
-
-    // Get user profile to check credits
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("credits, role")
@@ -101,6 +69,24 @@ export async function POST(request: NextRequest) {
           required: CREDIT_COST,
           available: profile.credits,
         }, { status: 400 }),
+        request
+      );
+    }
+
+    const body = await request.json();
+    const { masterPlan, perspective, midShotImage, type } = body;
+
+    // Validate inputs
+    if (type === 'midshot' && (!masterPlan || !perspective)) {
+      return withCorsHeaders(
+        NextResponse.json({ error: "masterPlan and perspective images are required" }, { status: 400 }),
+        request
+      );
+    }
+
+    if (type === 'detailed' && !midShotImage) {
+      return withCorsHeaders(
+        NextResponse.json({ error: "midShotImage is required" }, { status: 400 }),
         request
       );
     }
