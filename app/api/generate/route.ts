@@ -239,11 +239,15 @@ export async function POST(request: NextRequest) {
 
     // Check credits (Pro users have unlimited)
     const isPro = profile.role === "pro";
-    if (!isPro && profile.credits < imageCount) {
+    
+    // Calculate credit cost based on mode: Random Angle = 2 credits, others = imageCount
+    const creditCost = isRandomMode ? 2 : imageCount;
+    
+    if (!isPro && profile.credits < creditCost) {
       return NextResponse.json({
-        error: `Bạn cần ${imageCount} lượt để thực hiện, nhưng chỉ còn ${profile.credits} lượt. Vui lòng nâng cấp Pro.`,
+        error: `Bạn cần ${creditCost} lượt để thực hiện, nhưng chỉ còn ${profile.credits} lượt. Vui lòng nâng cấp Pro.`,
         needUpgrade: true,
-        required: imageCount,
+        required: creditCost,
         available: profile.credits,
       }, { status: 400 });
     }
@@ -375,11 +379,11 @@ export async function POST(request: NextRequest) {
     if (!isPro) {
       const { data: deductResult, error: deductError } = await supabase.rpc("deduct_credits", {
         p_user_id: user.id,
-        p_amount: imageCount,
+        p_amount: creditCost,
       });
 
       if (!deductError) {
-        remainingCredits = deductResult?.[0]?.remaining_credits ?? (profile.credits - imageCount);
+        remainingCredits = deductResult?.[0]?.remaining_credits ?? (profile.credits - creditCost);
       }
     }
 
@@ -388,7 +392,7 @@ export async function POST(request: NextRequest) {
 
     return withCorsHeaders(NextResponse.json({ 
       results: allResults,
-      creditsUsed: isPro ? 0 : imageCount,
+      creditsUsed: isPro ? 0 : creditCost,
       remainingCredits: isPro ? -1 : remainingCredits,
       isPro,
     }), request);
