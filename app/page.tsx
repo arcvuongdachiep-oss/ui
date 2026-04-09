@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { RotateCcw, Zap, Crown, AlertCircle, X, LogOut, ChevronDown, Clock, Loader2, Menu } from "lucide-react";
+import { RotateCcw, Zap, Crown, AlertCircle, X, LogOut, ChevronDown, Clock, Loader2, MessageCircle, ExternalLink, Menu } from "lucide-react";
 import Image from "next/image";
 import type { ModeId, PromptResult, TabId } from "@/lib/types";
 import { ModeSelector, MODES } from "@/components/mode-selector";
+import { Camera, Layers, Grid3X3, BookOpen } from "lucide-react";
 import { ImageUploader } from "@/components/image-uploader";
 import { ResultsPanel } from "@/components/results-panel";
 import { 
@@ -25,6 +26,13 @@ interface UserProfile {
   avatarUrl?: string;
 }
 
+interface QueueStatus {
+  position: number;
+  estimatedWait: number;
+  rateLimitRemaining: number;
+  rateLimitResetIn: number;
+}
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabId>('ai-prompt');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -38,11 +46,13 @@ export default function Home() {
   const [optimizingIndices, setOptimizingIndices] = useState<number[]>([]); // Track which base images are optimizing
   const [isRefOptimizing, setIsRefOptimizing] = useState(false); // Track ref image optimization
   const [results, setResults] = useState<PromptResult[]>([]);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
   const [tokenEstimate, setTokenEstimate] = useState<TokenEstimate | null>(null);
   const [savings, setSavings] = useState(0);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [queueStatus, setQueueStatus] = useState<QueueStatus | null>(null);
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
