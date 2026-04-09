@@ -421,12 +421,12 @@ export function ImageUploader({
           <div className="flex items-center justify-center gap-3 text-[10px] text-[#666]">
             {baseImages.length > 0 && !cooldownTime && (
               <div className="flex items-center gap-1.5">
-                <span>Ton:</span>
+                <span>Cost:</span>
                 <div className="flex items-center gap-0.5 text-yellow-400 font-semibold">
                   <Zap className="w-3 h-3 fill-yellow-400" />
-                  <span>{selectedMode === 'random' ? 2 : baseImages.length}</span>
+                  <span>{baseImages.length}</span>
                 </div>
-                <span>credit{(selectedMode === 'random' ? 2 : baseImages.length) > 1 ? "s" : ""}</span>
+                <span>credit{baseImages.length > 1 ? "s" : ""}</span>
               </div>
             )}
             {cooldownTime > 0 && (
