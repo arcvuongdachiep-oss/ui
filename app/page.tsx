@@ -36,7 +36,7 @@ interface QueueStatus {
 }
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<TabId>('ai-prompt');
+  const [activeTab, setActiveTab] = useState<TabId>('showcase');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedMode, setSelectedMode] = useState<ModeId | null>(null);
   const [baseImages, setBaseImages] = useState<string[]>([]);
