@@ -1,12 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { RotateCcw, Zap, Crown, AlertCircle, X, LogOut, ChevronDown, Clock, ExternalLink, Menu } from "lucide-react";
+import { RotateCcw, Zap, Crown, AlertCircle, X, LogOut, ChevronDown, Clock, Loader2, MessageCircle, ExternalLink, Menu } from "lucide-react";
 import Image from "next/image";
-import type { TabId } from "@/lib/types";
-import { ModeSelector } from "@/components/mode-selector";
-import { Grid3X3, BookOpen } from "lucide-react";
+import type { ModeId, PromptResult, TabId, PromptHistoryItem } from "@/lib/types";
+import { ModeSelector, MODES } from "@/components/mode-selector";
+import { Camera, Layers, Grid3X3, BookOpen } from "lucide-react";
+import { ImageUploader } from "@/components/image-uploader";
+import { ResultsPanel } from "@/components/results-panel";
+import { PromptHistory } from "@/components/prompt-history";
+import { usePromptHistory } from "@/hooks/usePromptHistory";
+import { 
+  optimizeImage, 
+  estimateTokens, 
+  calculateSavings,
+  type OptimizedImage,
+  type TokenEstimate 
+} from "@/lib/image-optimizer";
 
 interface UserProfile {
   credits: number;
@@ -17,12 +28,51 @@ interface UserProfile {
   avatarUrl?: string;
 }
 
+interface QueueStatus {
+  position: number;
+  estimatedWait: number;
+  rateLimitRemaining: number;
+  rateLimitResetIn: number;
+}
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabId>('ai-prompt');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [selectedMode, setSelectedMode] = useState<ModeId | null>(null);
+  const [baseImages, setBaseImages] = useState<string[]>([]);
+  const [optimizedBaseImages, setOptimizedBaseImages] = useState<OptimizedImage[]>([]);
+  const [refImage, setRefImage] = useState<string | null>(null);
+  const [optimizedRefImage, setOptimizedRefImage] = useState<OptimizedImage | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [optimizingIndices, setOptimizingIndices] = useState<number[]>([]); // Track which base images are optimizing
+  const [isRefOptimizing, setIsRefOptimizing] = useState(false); // Track ref image optimization
+  const [results, setResults] = useState<PromptResult[]>([]);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [tokenEstimate, setTokenEstimate] = useState<TokenEstimate | null>(null);
+  const [savings, setSavings] = useState(0);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [queueStatus, setQueueStatus] = useState<QueueStatus | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [statusMessage, setStatusMessage] = useState<string>("");
+  const [isButtonDisabled, setIsButtonDisabled] = useState(false);
+  const [cooldownTime, setCooldownTime] = useState(0);
+  const [userInstructions, setUserInstructions] = useState("");
+  const cooldownRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Prompt History hook
+  const { items: historyItems, isLoading: historyLoading, savePromptHistory, deletePromptHistory } = usePromptHistory();
+
+  // Cleanup cooldown timer
+  useEffect(() => {
+    return () => {
+      if (cooldownRef.current) {
+        clearInterval(cooldownRef.current);
+      }
+    };
+  }, []);
 
   // Fetch user profile on mount
   useEffect(() => {
@@ -40,10 +90,303 @@ export default function Home() {
     fetchProfile();
   }, []);
 
-  // Simple reset function - just resets UI state
-  const reset = () => {
-    setActiveTab('ai-prompt');
+  // Calculate token estimate when images change
+  useEffect(() => {
+    if (optimizedBaseImages.length === 0 && !optimizedRefImage) {
+      setTokenEstimate(null);
+      setSavings(0);
+      return;
+    }
+
+    const allOptimized = [
+      ...optimizedBaseImages,
+      ...(optimizedRefImage ? [optimizedRefImage] : [])
+    ];
+
+    // Base prompt text (approximate)
+    const basePromptLength = 2000; // System instruction + mode config
+    const estimate = estimateTokens(allOptimized, "x".repeat(basePromptLength));
+    setTokenEstimate(estimate);
+
+    // Calculate savings
+    const totalOriginal = allOptimized.reduce((sum, img) => sum + img.originalSize, 0);
+    const totalOptimized = allOptimized.reduce((sum, img) => sum + img.optimizedSize, 0);
+    setSavings(calculateSavings(totalOriginal, totalOptimized));
+  }, [optimizedBaseImages, optimizedRefImage]);
+
+  const handleBaseUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []) as File[];
+    const remainingSlots = 4 - baseImages.length;
+    const filesToProcess = files.slice(0, remainingSlots);
+
+    if (filesToProcess.length === 0) return;
+
+    setIsOptimizing(true);
+
+    // Process each file with proper async handling
+    const processFile = async (file: File, startIndex: number, fileIndex: number): Promise<void> => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = async (event) => {
+          if (event.target?.result) {
+            const dataUrl = event.target.result as string;
+            const targetIndex = startIndex + fileIndex;
+            
+            // Add placeholder image and mark as optimizing
+            setBaseImages((prev) => [...prev, dataUrl]);
+            setOptimizingIndices((prev) => [...prev, targetIndex]);
+            
+            try {
+              const optimized = await optimizeImage(dataUrl);
+              // Replace placeholder with optimized version
+              setBaseImages((prev) => {
+                const updated = [...prev];
+                updated[targetIndex] = optimized.dataUrl;
+                return updated;
+              });
+              setOptimizedBaseImages((prev) => [...prev, optimized]);
+            } catch {
+              // Keep original if optimization fails
+            }
+            
+            // Remove from optimizing list
+            setOptimizingIndices((prev) => prev.filter(i => i !== targetIndex));
+          }
+          resolve();
+        };
+        reader.readAsDataURL(file);
+      });
+    };
+
+    const startIndex = baseImages.length;
+    await Promise.all(filesToProcess.map((file, idx) => processFile(file, startIndex, idx)));
+    
+    setIsOptimizing(false);
+  }, [baseImages.length]);
+
+  const handleRefUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setIsOptimizing(true);
+      setIsRefOptimizing(true);
+      
+      const reader = new FileReader();
+      reader.onloadend = async (event) => {
+        if (event.target?.result) {
+          const dataUrl = event.target.result as string;
+          // Show placeholder immediately with blur
+          setRefImage(dataUrl);
+          
+          try {
+            const optimized = await optimizeImage(dataUrl);
+            setRefImage(optimized.dataUrl);
+            setOptimizedRefImage(optimized);
+          } catch {
+            // Keep original if optimization fails
+          }
+          
+          setIsRefOptimizing(false);
+          setIsOptimizing(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  }, []);
+
+  const removeBaseImage = (index: number) => {
+    setBaseImages((prev) => prev.filter((_, i) => i !== index));
+    setOptimizedBaseImages((prev) => prev.filter((_, i) => i !== index));
   };
+
+  const removeRefImage = () => {
+    setRefImage(null);
+    setOptimizedRefImage(null);
+  };
+
+  // Start cooldown timer
+  const startCooldown = (seconds: number) => {
+    setCooldownTime(seconds);
+    setIsButtonDisabled(true);
+    
+    if (cooldownRef.current) {
+      clearInterval(cooldownRef.current);
+    }
+    
+    cooldownRef.current = setInterval(() => {
+      setCooldownTime(prev => {
+        if (prev <= 1) {
+          clearInterval(cooldownRef.current!);
+          setIsButtonDisabled(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const generatePrompts = async () => {
+    const isRefRequired = selectedMode !== 'random';
+    if (!selectedMode || optimizedBaseImages.length === 0 || (isRefRequired && !optimizedRefImage)) return;
+
+    const imageCount = optimizedBaseImages.length;
+
+    // Credit deduction disabled - using AI Studio is now free
+    // if (userProfile && !userProfile.isPro && userProfile.credits < imageCount) {
+    //   setErrorMessage(`Ban can ${imageCount} luot de thuc hien, nhung chi con ${userProfile.credits} luot. Vui long nang cap Pro.`);
+    //   setShowUpgradeModal(true);
+    //   return;
+    // }
+
+    // Disable button immediately
+    setIsButtonDisabled(true);
+    setLoading(true);
+    setResults([]);
+    setErrorMessage(null);
+    setProgress(0);
+    setStatusMessage("Dang ket noi...");
+
+    try {
+      // Progress simulation
+      const progressInterval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 90) return prev;
+          return prev + Math.random() * 15;
+        });
+      }, 500);
+
+      setStatusMessage("Dang phan tich hinh anh...");
+      
+      // Send optimized images (already compressed base64)
+      const optimizedBaseDataUrls = optimizedBaseImages.map(img => img.dataUrl);
+      
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          baseImages: optimizedBaseDataUrls,
+          refImage: optimizedRefImage?.dataUrl || null,
+          mode: selectedMode,
+          userInstructions: userInstructions.trim() || null,
+        }),
+      });
+
+      clearInterval(progressInterval);
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Handle rate limit
+        if (data.rateLimited) {
+          setErrorMessage(data.error);
+          startCooldown(data.resetIn || 180);
+          return;
+        }
+        
+        // Handle server busy
+        if (data.serverBusy) {
+          setErrorMessage(data.error);
+          setQueueStatus({
+            position: data.queueLength || 0,
+            estimatedWait: (data.queueLength || 0) * 30,
+            rateLimitRemaining: 0,
+            rateLimitResetIn: 0,
+          });
+          return;
+        }
+
+        if (data.needUpgrade) {
+          setErrorMessage(data.error);
+          setShowUpgradeModal(true);
+        } else {
+          setErrorMessage(data.error || "Co loi xay ra khi tao prompt");
+        }
+        return;
+      }
+
+      setProgress(100);
+      setStatusMessage("Hoan thanh!");
+      setResults(data.results);
+      
+      // Save to prompt history
+      if (data.results && data.results.length > 0) {
+        savePromptHistory(
+          data.results[0].prompt,
+          baseImages[0] || undefined,
+          optimizedRefImage?.dataUrl || undefined
+        );
+      }
+      
+      // Update local credits after successful generation
+      if (data.remainingCredits !== undefined && data.remainingCredits >= 0) {
+        setUserProfile(prev => prev ? {
+          ...prev,
+          credits: data.remainingCredits,
+        } : null);
+      }
+
+      // Start 1-minute cooldown after successful request
+      startCooldown(60);
+      
+    } catch {
+      setErrorMessage("Co loi xay ra. Vui long thu lai.");
+    } finally {
+      setLoading(false);
+      setStatusMessage("");
+      setTimeout(() => setProgress(0), 1000);
+    }
+  };
+
+  const copyToClipboard = (text: string, index: number) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(index);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleSelectPromptHistory = async (item: PromptHistoryItem) => {
+    // Null check to prevent crashes
+    if (!item) {
+      console.warn("Invalid history item selected");
+      return;
+    }
+    
+    // Reset current results
+    setResults([]);
+    setErrorMessage(null);
+    
+    // Restore prompt as user instructions
+    if (item.prompt) {
+      // Truncate to max 100 characters for user instructions field
+      setUserInstructions(item.prompt.substring(0, 100));
+    }
+    
+    // Note: Base images and ref images are stored as URLs but the form expects 
+    // base64 data, so we only restore the prompt text. Users will need to 
+    // re-upload images if they want to use the same ones.
+    
+    // Switch to AI prompt tab
+    setActiveTab('ai-prompt');
+    
+    // Scroll to top of page smoothly so user sees the form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Show confirmation message
+    setStatusMessage("Da dien lai prompt tu lich su!");
+    setTimeout(() => setStatusMessage(null), 2000);
+  };
+
+  const reset = () => {
+    setSelectedMode(null);
+    setBaseImages([]);
+    setOptimizedBaseImages([]);
+    setRefImage(null);
+    setOptimizedRefImage(null);
+    setResults([]);
+    setTokenEstimate(null);
+    setSavings(0);
+  };
+
+  const modeConfig = MODES.find((m) => m.id === selectedMode);
 
   return (
     <div className="min-h-screen bg-[#050505] text-[#E4E3E0] font-sans selection:bg-[#F27D26] selection:text-white">
@@ -424,52 +767,112 @@ export default function Home() {
               exit={{ opacity: 0, y: -10 }}
               className="w-full"
             >
-              {/* Simplified: Only show ModeSelector which redirects to AI Studio */}
-              <ModeSelector />
+              {!selectedMode ? (
+                <ModeSelector onSelectMode={setSelectedMode} />
+              ) : (
+                <motion.div
+                  key="step2"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="space-y-6"
+                >
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
+                    <ImageUploader
+                      selectedMode={selectedMode}
+                      modeConfig={modeConfig}
+                      baseImages={baseImages}
+                      refImage={refImage}
+                      loading={loading}
+                      isOptimizing={isOptimizing}
+                      optimizingIndices={optimizingIndices}
+                      isRefOptimizing={isRefOptimizing}
+                      tokenEstimate={tokenEstimate}
+                      savings={savings}
+                      progress={progress}
+                      statusMessage={statusMessage}
+                      isButtonDisabled={isButtonDisabled || optimizingIndices.length > 0 || isRefOptimizing}
+                      cooldownTime={cooldownTime}
+                      userInstructions={userInstructions}
+                      onUserInstructionsChange={setUserInstructions}
+                      onBack={() => setSelectedMode(null)}
+                      onBaseUpload={handleBaseUpload}
+                      onRefUpload={handleRefUpload}
+                      onRemoveBase={removeBaseImage}
+                      onRemoveRef={removeRefImage}
+                      onGenerate={generatePrompts}
+                    />
+
+                    <ResultsPanel
+                      selectedMode={selectedMode}
+                      modeConfig={modeConfig}
+                      results={results}
+                    />
+                  </div>
+
+                  {/* Prompt History - with null safety */}
+                  {historyItems && historyItems.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-8 pt-6 border-t border-[#1A1A1A] bg-[#0A0A0A] rounded-xl"
+                    >
+                      <PromptHistory
+                        items={historyItems || []}
+                        onSelectHistory={handleSelectPromptHistory}
+                        onDeleteHistory={deletePromptHistory}
+                        isLoading={historyLoading}
+                      />
+                    </motion.div>
+                  )}
+                </motion.div>
+              )}
 
               {/* AI Resources Section */}
-              <div className="mt-16 pt-16 border-t border-[#1A1A1A] space-y-12 max-w-5xl mx-auto">
-                <div className="text-center space-y-4">
-                  <h2 className="text-3xl font-black uppercase tracking-tighter italic">AI ARCHVIZ RESOURCES</h2>
-                  <p className="text-[#666] uppercase tracking-[0.3em] text-[10px] font-bold">Master the tools of the future</p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-[#F27D26]">
-                      <BookOpen className="w-4 h-4" />
-                      <h3 className="text-[11px] font-black uppercase tracking-widest">Video Huong Dan Su Dung</h3>
-                    </div>
-                    <div className="aspect-video rounded-2xl overflow-hidden border border-[#1A1A1A] bg-black shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-                      <iframe 
-                        className="w-full h-full"
-                        src="https://www.youtube.com/embed/auouVOCAbTI" 
-                        title="Huong dan su dung" 
-                        frameBorder="0" 
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                        allowFullScreen
-                      />
-                    </div>
+              {!selectedMode && (
+                <div className="mt-16 pt-16 border-t border-[#1A1A1A] space-y-12 max-w-5xl mx-auto">
+                  <div className="text-center space-y-4">
+                    <h2 className="text-3xl font-black uppercase tracking-tighter italic">AI ARCHVIZ RESOURCES</h2>
+                    <p className="text-[#666] uppercase tracking-[0.3em] text-[10px] font-bold">Master the tools of the future</p>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-[#F27D26]">
-                      <Grid3X3 className="w-4 h-4" />
-                      <h3 className="text-[11px] font-black uppercase tracking-widest">Ung dung AI trong Dien hoa</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-[#F27D26]">
+                        <BookOpen className="w-4 h-4" />
+                        <h3 className="text-[11px] font-black uppercase tracking-widest">Video Huong Dan Su Dung</h3>
+                      </div>
+                      <div className="aspect-video rounded-2xl overflow-hidden border border-[#1A1A1A] bg-black shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+                        <iframe 
+                          className="w-full h-full"
+                          src="https://www.youtube.com/embed/auouVOCAbTI" 
+                          title="Huong dan su dung" 
+                          frameBorder="0" 
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                          allowFullScreen
+                        />
+                      </div>
                     </div>
-                    <div className="aspect-video rounded-2xl overflow-hidden border border-[#1A1A1A] bg-black shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-                      <iframe 
-                        className="w-full h-full"
-                        src="https://www.youtube.com/embed/videoseries?list=PLAxnVKb5XqwVdEsJm4-eKY2picTnVQn0E" 
-                        title="AI in Archviz Playlist" 
-                        frameBorder="0" 
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                        allowFullScreen
-                      />
+
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-[#F27D26]">
+                        <Grid3X3 className="w-4 h-4" />
+                        <h3 className="text-[11px] font-black uppercase tracking-widest">Ung dung AI trong Dien hoa</h3>
+                      </div>
+                      <div className="aspect-video rounded-2xl overflow-hidden border border-[#1A1A1A] bg-black shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+                        <iframe 
+                          className="w-full h-full"
+                          src="https://www.youtube.com/embed/videoseries?list=PLAxnVKb5XqwVdEsJm4-eKY2picTnVQn0E" 
+                          title="AI in Archviz Playlist" 
+                          frameBorder="0" 
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                          allowFullScreen
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
             </motion.div>
           ) : activeTab === 'd5-tutorial' ? (
             <motion.div
