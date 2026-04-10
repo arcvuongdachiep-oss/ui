@@ -38,55 +38,77 @@ const MODES: ModeConfig[] = [
     id: 'strict',
     title: 'STRICT MODE',
     instruction: `
-      🔒 TRƯỜNG HỢP 1 – STRICT MODE (KHÓA FORM TUYỆT ĐỐI)
-      ĐẶC TÍNH: Bạn là một Đạo diễn Hình ảnh (DoP) Huyền thoại. Bạn "xây dựng" và "đắp vật liệu" bằng ngôn ngữ.
-      QUY TRÌNH PHÂN TÍCH:
-      1. Bóc tách Ảnh 1 (Base Model – Khung xương): Phân tích cấu trúc không gian, góc camera, hình khối chính. MỤC TIÊU: Giữ nguyên tuyệt đối "form" công trình.
-      2. Bóc tách Ảnh 2 (Reference – Lớp áo & Cảm xúc): Trích xuất phong cách, ánh sáng, tông ảnh. KHÔNG lấy hình khối từ ảnh này.
-      BẢN CHẤT OUTPUT: Lấy hình khối từ Ảnh 1 + Áp ánh sáng và vật liệu từ Ảnh 2.
-      YÊU CẦU PROMPT (5 yếu tố): Chủ đề, Vật liệu chi tiết, Ánh sáng (QUAN TRỌNG NHẤT), Camera & Phong cách, Môi trường.
-      THAM SỐ BẮT BUỘC: "strictly preserve the original architectural massing, maintain exact camera perspective, no redesign, no geometry alteration, identical viewpoint as the base image, photorealistic, masterpiece, high-end archviz, architectural photography, ultra-detailed, unreal engine 5 rendering style, octane render, ray tracing"
+      🔒 STRICT MODE (KHÓA FORM TUYỆT ĐỐI)
+      PHÂN TÍCH: Ảnh 1 = khung xương (giữ nguyên form). Ảnh 2 = lớp áo (ánh sáng, vật liệu).
+      OUTPUT: Giữ hình khối Ảnh 1 + Áp style Ảnh 2.
+      
+      FORMAT PROMPT (mỗi dòng là 1 phần, dùng \\n ngắt dòng):
+      - Subject: [loại công trình, đặc điểm chính]
+      - Materials: [vật liệu chính, texture]
+      - Lighting: [nguồn sáng, hướng, mood]
+      - Camera: [góc, lens, DOF]
+      - Environment: [bối cảnh, thời tiết]
+      - Technical: strictly preserve massing, exact perspective, photorealistic, archviz, octane
+      
+      YÊU CẦU: Prompt NGẮN GỌN, chỉ từ khóa then chốt, không văn phong miêu tả dài.
     `
   },
   {
     id: 'creative',
     title: 'CREATIVE MODE',
     instruction: `
-      ⚡ TRƯỜNG HỢP 2 – CREATIVE MODE (BIẾN ĐỔI CÓ KIỂM SOÁT)
-      ĐẶC TÍNH: Bạn là một Đạo diễn Hình ảnh (DoP) Huyền thoại. Bạn nâng cấp công trình dựa trên cấu trúc gốc.
-      QUY TRÌNH PHÂN TÍCH:
-      1. Bóc tách Ảnh 1 (Base Model – Khung xương linh hoạt): Phân tích loại công trình, góc camera, hình khối chính. MỤC TIÊU: Giữ bố cục chính, cho phép làm sạch hình khối, tinh chỉnh tỷ lệ, tối ưu facade.
-      2. Bóc tách Ảnh 2 (Reference – Lớp áo nâng cấp): Trích xuất ánh sáng cinematic, vật liệu cao cấp, color grading.
-      BẢN CHẤT OUTPUT: Phiên bản "upgrade" của thiết kế gốc: Kiến trúc hơn, vật liệu đẹp hơn, ánh sáng sâu hơn.
-      YÊU CẦU PROMPT: Chủ đề (nâng cấp), Vật liệu cao cấp, Ánh sáng cinematic nhẹ, Camera tối ưu framing, Môi trường tăng realism.
-      THAM SỐ BẮT BUỘC: "preserve overall architectural composition", "refined geometry and enhanced facade detailing", "slight artistic enhancement allowed", "improved material definition and realism"
+      ⚡ CREATIVE MODE (BIẾN ĐỔI CÓ KIỂM SOÁT)
+      PHÂN TÍCH: Ảnh 1 = bố cục gốc (cho phép tinh chỉnh). Ảnh 2 = style nâng cấp.
+      OUTPUT: Phiên bản upgrade - kiến trúc hơn, vật liệu đẹp hơn.
+      
+      FORMAT PROMPT (mỗi dòng là 1 phần, dùng \\n ngắt dòng):
+      - Subject: [loại công trình, nâng cấp facade]
+      - Materials: [vật liệu cao cấp, chi tiết]
+      - Lighting: [cinematic, soft shadows]
+      - Camera: [optimized framing, lens]
+      - Environment: [realistic context]
+      - Technical: preserve composition, refined geometry, enhanced detailing, improved realism
+      
+      YÊU CẦU: Prompt NGẮN GỌN, chỉ từ khóa then chốt, không văn phong miêu tả dài.
     `
   },
   {
     id: 'cinematic',
     title: 'CINEMATIC MODE',
     instruction: `
-      🎬 TRƯỜNG HỢP 3 – CINEMATIC MODE (BIẾN ĐỔI MẠNH – BÁN CẢM XÚC)
-      ĐẶC TÍNH: Bạn là một Đạo diễn điện ảnh. Bạn kể câu chuyện bằng ánh sáng. Công trình là "diễn viên", ánh sáng là "linh hồn".
-      QUY TRÌNH PHÂN TÍCH:
-      1. Bóc tách Ảnh 1 (Base Model – Nhận diện): Phân tích loại công trình, hình khối. MỤC TIÊU: Giữ nhận diện, cho phép chỉnh framing, tăng chiều sâu, làm mạnh silhouette.
-      2. Bóc tách Ảnh 2 (Reference – Cảm xúc điện ảnh): Trích xuất lighting mạnh (backlight, rim light, volumetric), atmosphere (sương mù, bụi sáng), color grading film tone.
-      BẢN CHẤT OUTPUT: Một "film still kiến trúc". Ánh sáng dẫn dắt mắt nhìn, không khí tạo chiều sâu.
-      YÊU CẦU PROMPT: Chủ đề (storytelling), Vật liệu phục vụ mood, Ánh sáng cinematic kịch tính, Camera góc điện ảnh (DOF, lens), Môi trường hiệu ứng.
-      THAM SỐ BẮT BUỘC: "cinematic lighting with dramatic contrast", "volumetric light rays and atmospheric depth", "moody environment with strong storytelling", "film still composition, emotional impact", "dynamic shadows and reflective surfaces"
+      🎬 CINEMATIC MODE (ĐIỆN ẢNH - CẢM XÚC)
+      PHÂN TÍCH: Ảnh 1 = silhouette công trình. Ảnh 2 = mood điện ảnh.
+      OUTPUT: Film still kiến trúc - ánh sáng dẫn dắt, atmosphere tạo chiều sâu.
+      
+      FORMAT PROMPT (mỗi dòng là 1 phần, dùng \\n ngắt dòng):
+      - Subject: [công trình, storytelling element]
+      - Materials: [phục vụ mood, reflective]
+      - Lighting: [dramatic, backlight, rim light, volumetric]
+      - Camera: [cinematic angle, DOF, anamorphic]
+      - Atmosphere: [fog, dust particles, god rays]
+      - Technical: cinematic contrast, film grain, emotional impact, dynamic shadows
+      
+      YÊU CẦU: Prompt NGẮN GỌN, chỉ từ khóa then chốt, không văn phong miêu tả dài.
     `
   },
   {
     id: 'random',
     title: 'RANDOM ANGLE',
     instruction: `
-      🎲 TRƯỜNG HỢP 4 – RANDOM ANGLE (PHÁT TRIỂN GÓC NGẪU NHIÊN)
-      ĐẶC TÍNH: Bạn là một Nhiếp ảnh gia kiến trúc chuyên nghiệp.
-      NHIỆM VỤ: Tạo ra 3 bộ prompt khác nhau cho cùng một công trình:
-      - GÓC 1: Trung cảnh (Medium Shot) - Cân bằng giữa kiến trúc và môi trường.
-      - GÓC 2: Cận cảnh (Close-up) - Đặc tả vật liệu và chi tiết tinh xảo.
-      - GÓC 3: Cinematic - Góc nhìn đầy cảm xúc, ánh sáng nghệ thuật, chiều sâu trường ảnh (DOF).
-      YÊU CẦU: Trình bày rõ ràng 3 góc này trong kết quả.
+      🎲 RANDOM ANGLE (3 GÓC KHÁC NHAU)
+      NHIỆM VỤ: Tạo 3 prompt cho cùng công trình với 3 góc:
+      - Medium Shot: cân bằng kiến trúc + môi trường
+      - Close-up: chi tiết vật liệu, texture
+      - Cinematic: góc cảm xúc, ánh sáng nghệ thuật, DOF
+      
+      FORMAT MỖI PROMPT (dùng \\n ngắt dòng):
+      - Subject: [mô tả ngắn]
+      - Materials: [vật liệu]
+      - Lighting: [ánh sáng]
+      - Camera: [góc, lens]
+      - Environment: [bối cảnh]
+      
+      YÊU CẦU: Mỗi prompt NGẮN GỌN, chỉ từ khóa, không văn phong dài.
     `
   }
 ];
@@ -182,7 +204,7 @@ export async function POST(request: NextRequest) {
     recordRequest(user.id);
 
     const body = await request.json();
-    const { baseImages, refImage, mode } = body;
+    const { baseImages, refImage, mode, userDetails } = body;
 
     // Validate mode
     if (!validateModeId(mode)) {
@@ -273,14 +295,23 @@ export async function POST(request: NextRequest) {
 
       if (isRandomMode) {
         // Random mode: generate 3 different angles
+        // Build user specifics string
+        const userSpecifics = userDetails ? `\nINCLUDE USER SPECIFICS: ${userDetails}` : '';
+        
         const systemInstruction = `
-          BẠN LÀ MỘT ĐẠO DIỄN HÌNH ẢNH (DoP) CHUYÊN VỀ DIỄN HỌA KIẾN TRÚC. 
-          NHIỆM VỤ: TẠO RA 3 BỘ PROMPT KHÁC NHAU (TRUNG CẢNH, CẬN CẢNH, CINEMATIC) DỰA TRÊN ẢNH BASE.
-          ${base64Ref ? 'Sử dụng ảnh Style để lấy phong cách, ánh sáng và vật liệu.' : 'Vì không có ảnh Style, hãy tự đề xuất phong cách, ánh sáng và vật liệu chuyên nghiệp, sang trọng và thực tế nhất cho công trình.'}
+          BẠN LÀ ĐẠO DIỄN HÌNH ẢNH (DoP) KIẾN TRÚC. 
+          NHIỆM VỤ: TẠO 3 PROMPT (TRUNG CẢNH, CẬN CẢNH, CINEMATIC).
+          ${base64Ref ? 'Dùng ảnh Style lấy ánh sáng, vật liệu.' : 'Tự đề xuất style chuyên nghiệp.'}
+          ${userSpecifics}
 
           ${modeConfig.instruction}
 
-          ĐỊNH DẠNG TRẢ VỀ JSON LÀ MỘT MẢNG GỒM 3 ĐỐI TƯỢNG:
+          QUAN TRỌNG - FORMAT OUTPUT:
+          - Mỗi prompt dùng \\n để ngắt dòng giữa các phần (Subject, Materials, Lighting, Camera, Environment)
+          - Prompt phải NGẮN GỌN, chỉ từ khóa then chốt, KHÔNG văn phong miêu tả dài dòng
+          - Ví dụ format: "Subject: modern villa, white facade\\nMaterials: exposed concrete, glass curtain wall\\nLighting: golden hour, soft shadows..."
+
+          ĐỊNH DẠNG JSON:
           [
             { "label": "Medium Shot", "prompt": "...", "vietnamese": "..." },
             { "label": "Close-up", "prompt": "...", "vietnamese": "..." },
@@ -323,13 +354,22 @@ export async function POST(request: NextRequest) {
         }
       } else {
         // Standard modes: generate single prompt
+        // Build user specifics string
+        const userSpecificsStd = userDetails ? `\nINCLUDE USER SPECIFICS: ${userDetails}` : '';
+        
         const systemInstruction = `
-          BẠN LÀ MỘT ĐẠO DIỄN HÌNH ẢNH (DoP) CHUYÊN VỀ DIỄN HỌA KIẾN TRÚC. 
-          NHIỆM VỤ: TẠO RA PROMPT DUY NHẤT DỰA TRÊN ẢNH BASE VÀ ẢNH STYLE THEO KỊCH BẢN SAU:
+          BẠN LÀ ĐẠO DIỄN HÌNH ẢNH (DoP) KIẾN TRÚC.
+          NHIỆM VỤ: TẠO PROMPT DỰA TRÊN ẢNH BASE + ẢNH STYLE.
+          ${userSpecificsStd}
 
           ${modeConfig.instruction}
 
-          ĐỊNH DẠNG TRẢ VỀ JSON:
+          QUAN TRỌNG - FORMAT OUTPUT:
+          - Dùng \\n để ngắt dòng giữa các phần (Subject, Materials, Lighting, Camera, Environment, Technical)
+          - Prompt phải NGẮN GỌN, chỉ từ khóa then chốt, KHÔNG văn phong miêu tả dài dòng
+          - Ví dụ: "Subject: luxury resort, infinity pool\\nMaterials: natural stone, teak wood\\nLighting: sunset, warm tones..."
+
+          ĐỊNH DẠNG JSON:
           {
             "prompt": "...",
             "vietnamese": "..."
