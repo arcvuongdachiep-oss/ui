@@ -2,10 +2,21 @@ import useSWR, { mutate } from "swr";
 import { PromptHistoryItem } from "@/lib/types";
 
 const fetcher = async (url: string) => {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("Failed to fetch");
-  const json = await res.json();
-  return json.data;
+  try {
+    const res = await fetch(url);
+    const json = await res.json();
+    
+    // Always return data array, even if fetch failed
+    if (!res.ok) {
+      console.warn("Prompt history fetch failed:", res.status);
+      return [];
+    }
+    
+    return json.data || [];
+  } catch (err) {
+    console.warn("Prompt history fetcher error:", err);
+    return [];
+  }
 };
 
 export function usePromptHistory() {
@@ -16,6 +27,9 @@ export function usePromptHistory() {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
       dedupingInterval: 60000, // Cache for 1 minute
+      onError: (err) => {
+        console.warn("SWR error:", err);
+      }
     }
   );
 
@@ -35,12 +49,15 @@ export function usePromptHistory() {
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to save");
+      if (!response.ok) {
+        console.warn("Failed to save prompt history:", response.status);
+      }
 
-      // Revalidate cache
+      // Revalidate cache regardless of success/failure
       mutate("/api/prompt-history");
     } catch (err) {
-      console.error("Error saving prompt history:", err);
+      console.warn("Error saving prompt history:", err);
+      // Silently fail - don't crash frontend
     }
   };
 
@@ -50,12 +67,15 @@ export function usePromptHistory() {
         method: "DELETE",
       });
 
-      if (!response.ok) throw new Error("Failed to delete");
+      if (!response.ok) {
+        console.warn("Failed to delete prompt history:", response.status);
+      }
 
-      // Revalidate cache
+      // Revalidate cache regardless of success/failure
       mutate("/api/prompt-history");
     } catch (err) {
-      console.error("Error deleting prompt history:", err);
+      console.warn("Error deleting prompt history:", err);
+      // Silently fail - don't crash frontend
     }
   };
 
