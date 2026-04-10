@@ -1061,10 +1061,10 @@ export default function Home() {
               {/* Asset Categories */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
-                  { icon: <Layers className="w-6 h-6" />, title: "PBR TEXTURES", count: "450+", desc: "Premium Assets" },
-                  { icon: <Grid3X3 className="w-6 h-6" />, title: "3D MODELS", count: "1200+", desc: "Premium Assets" },
-                  { icon: <Camera className="w-6 h-6" />, title: "HDRI SKIES", count: "85+", desc: "Premium Assets" },
-                  { icon: <BookOpen className="w-6 h-6" />, title: "D5 PRESETS", count: "200+", desc: "Premium Assets" },
+                  { icon: <Layers className="w-6 h-6" />, title: "PBR TEXTURES", count: "450+", desc: "Premium Assets", action: "pbr", link: "https://ai.studio/apps/314a21d5-9492-4dfd-af81-d8bf15f0f7e2?fullscreenApplet=true" },
+                  { icon: <Grid3X3 className="w-6 h-6" />, title: "3D MODELS", count: "1200+", desc: "Premium Assets", action: "coming" },
+                  { icon: <Camera className="w-6 h-6" />, title: "HDRI SKIES", count: "85+", desc: "Premium Assets", action: "coming" },
+                  { icon: <BookOpen className="w-6 h-6" />, title: "D5 PRESETS", count: "200+", desc: "Premium Assets", action: "coming" },
                 ].map((category, i) => (
                   <motion.div
                     key={i}
@@ -1078,8 +1078,15 @@ export default function Home() {
                     </div>
                     <h3 className="text-lg md:text-xl font-black uppercase tracking-tighter italic mb-1">{category.title}</h3>
                     <p className="text-[9px] text-[#666] uppercase tracking-widest font-bold mb-6">{category.count} {category.desc}</p>
-                    <button className="w-full py-3 bg-black border border-[#1A1A1A] rounded-lg text-[10px] font-black uppercase tracking-[0.2em] hover:bg-[#F27D26] hover:text-black hover:border-[#F27D26] transition-all">
-                      COMING SOON
+                    <button 
+                      onClick={() => {
+                        if (category.action === "pbr" && category.link) {
+                          window.open(category.link, "_blank");
+                        }
+                      }}
+                      className="w-full py-3 bg-black border border-[#1A1A1A] rounded-lg text-[10px] font-black uppercase tracking-[0.2em] hover:bg-[#F27D26] hover:text-black hover:border-[#F27D26] transition-all"
+                    >
+                      {category.action === "pbr" ? "FREE" : "COMING SOON"}
                     </button>
                   </motion.div>
                 ))}

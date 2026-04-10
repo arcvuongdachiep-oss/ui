@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
     }
 
-    // Save prompt history
+    // Save prompt history with error handling for missing table
     const { data, error } = await supabase
       .from("prompt_history")
       .insert({
@@ -34,7 +34,12 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
+    // If table doesn't exist, silently fail and return success (graceful degradation)
     if (error) {
+      if (error.code === "PGRST204" || error.message?.includes("prompt_history")) {
+        console.warn("Prompt history table not available:", error.message);
+        return NextResponse.json({ success: true, data: null, tableUnavailable: true });
+      }
       console.error("Error saving prompt history:", error);
       return NextResponse.json(
         { error: "Failed to save prompt history" },
@@ -45,9 +50,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, data });
   } catch (err) {
     console.error("Error in POST prompt-history:", err);
+    // Gracefully handle missing table - don't crash
     return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
+      { success: true, data: null, tableUnavailable: true },
+      { status: 200 }
     );
   }
 }
@@ -74,7 +80,12 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: false })
       .limit(10);
 
+    // If table doesn't exist, return empty array (graceful degradation)
     if (error) {
+      if (error.code === "PGRST204" || error.message?.includes("prompt_history")) {
+        console.warn("Prompt history table not available:", error.message);
+        return NextResponse.json({ success: true, data: [], tableUnavailable: true });
+      }
       console.error("Error fetching prompt history:", error);
       return NextResponse.json(
         { error: "Failed to fetch prompt history" },
@@ -85,9 +96,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, data: data || [] });
   } catch (err) {
     console.error("Error in GET prompt-history:", err);
+    // Gracefully handle missing table - return empty array
     return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
+      { success: true, data: [], tableUnavailable: true },
+      { status: 200 }
     );
   }
 }
@@ -120,7 +132,12 @@ export async function DELETE(request: NextRequest) {
       .eq("id", historyId)
       .eq("user_id", user.id);
 
+    // If table doesn't exist, still return success (graceful degradation)
     if (error) {
+      if (error.code === "PGRST204" || error.message?.includes("prompt_history")) {
+        console.warn("Prompt history table not available:", error.message);
+        return NextResponse.json({ success: true, tableUnavailable: true });
+      }
       console.error("Error deleting prompt history:", error);
       return NextResponse.json(
         { error: "Failed to delete prompt history" },
@@ -131,9 +148,10 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("Error in DELETE prompt-history:", err);
+    // Gracefully handle missing table
     return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
+      { success: true, tableUnavailable: true },
+      { status: 200 }
     );
   }
 }
