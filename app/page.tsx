@@ -230,12 +230,12 @@ export default function Home() {
 
     const imageCount = optimizedBaseImages.length;
 
-    // Check credits before generating (for non-Pro users)
-    if (userProfile && !userProfile.isPro && userProfile.credits < imageCount) {
-      setErrorMessage(`Ban can ${imageCount} luot de thuc hien, nhung chi con ${userProfile.credits} luot. Vui long nang cap Pro.`);
-      setShowUpgradeModal(true);
-      return;
-    }
+    // Credit deduction disabled - using AI Studio is now free
+    // if (userProfile && !userProfile.isPro && userProfile.credits < imageCount) {
+    //   setErrorMessage(`Ban can ${imageCount} luot de thuc hien, nhung chi con ${userProfile.credits} luot. Vui long nang cap Pro.`);
+    //   setShowUpgradeModal(true);
+    //   return;
+    // }
 
     // Disable button immediately
     setIsButtonDisabled(true);
@@ -419,14 +419,24 @@ export default function Home() {
           {/* Tab Navigation - Desktop */}
           <nav className="hidden md:flex items-center gap-1 bg-black/50 p-1 rounded-lg border border-[#1A1A1A]">
             {([
-              { id: 'ai-prompt', label: 'AI Prompt' },
               { id: 'd5-tutorial', label: 'D5 Tutorial' },
-              { id: 'showcase', label: 'Showcase' },
+              { id: 'showcase', label: 'Library Showcase' },
               { id: 'library', label: 'Library' },
+              { id: 'ai-prompt', label: 'AI Prompt' },
             ] as { id: TabId; label: string }[]).map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  if (tab.id === 'ai-prompt') {
+                    // Open AI Studio in new tab for AI Prompt
+                    window.open(
+                      'https://ai.studio/apps/3de5c9d5-3387-4351-9a2e-70b3862a249f?fullscreenApplet=true',
+                      '_blank'
+                    );
+                  } else {
+                    setActiveTab(tab.id);
+                  }
+                }}
                 className={`px-4 py-2 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${
                   activeTab === tab.id
                     ? 'bg-[#F27D26] text-black shadow-[0_0_15px_rgba(242,125,38,0.3)]'
@@ -585,15 +595,23 @@ export default function Home() {
           >
             <nav className="flex flex-col p-2 gap-1">
               {([
-                { id: 'ai-prompt', label: 'AI Prompt' },
                 { id: 'd5-tutorial', label: 'D5 Tutorial' },
-                { id: 'showcase', label: 'Showcase' },
+                { id: 'showcase', label: 'Library Showcase' },
                 { id: 'library', label: 'Library' },
+                { id: 'ai-prompt', label: 'AI Prompt' },
               ] as { id: TabId; label: string }[]).map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => {
-                    setActiveTab(tab.id);
+                    if (tab.id === 'ai-prompt') {
+                      // Open AI Studio in new tab for AI Prompt
+                      window.open(
+                        'https://ai.studio/apps/3de5c9d5-3387-4351-9a2e-70b3862a249f?fullscreenApplet=true',
+                        '_blank'
+                      );
+                    } else {
+                      setActiveTab(tab.id);
+                    }
                     setIsMobileMenuOpen(false);
                   }}
                   className={`w-full px-4 py-3 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all text-left ${
