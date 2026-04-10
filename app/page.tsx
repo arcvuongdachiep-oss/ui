@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { RotateCcw, Zap, Crown, AlertCircle, X, LogOut, ChevronDown, Clock, Loader2, MessageCircle, ExternalLink } from "lucide-react";
+import { RotateCcw, Zap, Crown, AlertCircle, X, LogOut, ChevronDown, Clock, Loader2, MessageCircle, ExternalLink, Menu } from "lucide-react";
 import Image from "next/image";
 import type { ModeId, PromptResult, TabId } from "@/lib/types";
 import { ModeSelector, MODES } from "@/components/mode-selector";
@@ -35,6 +35,7 @@ interface QueueStatus {
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabId>('ai-prompt');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedMode, setSelectedMode] = useState<ModeId | null>(null);
   const [baseImages, setBaseImages] = useState<string[]>([]);
   const [optimizedBaseImages, setOptimizedBaseImages] = useState<OptimizedImage[]>([]);
@@ -369,7 +370,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Tab Navigation */}
+          {/* Tab Navigation - Desktop */}
           <nav className="hidden md:flex items-center gap-1 bg-black/50 p-1 rounded-lg border border-[#1A1A1A]">
             {([
               { id: 'ai-prompt', label: 'AI Prompt' },
@@ -390,6 +391,15 @@ export default function Home() {
               </button>
             ))}
           </nav>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden p-2 rounded-lg bg-black/50 border border-[#1A1A1A] text-[#888] hover:text-white hover:border-[#F27D26]/50 transition-all"
+            aria-label="Toggle menu"
+          >
+            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
         <div className="flex items-center gap-3">
           {/* User Profile & Credits Display */}
@@ -517,6 +527,42 @@ export default function Home() {
           </motion.button>
         </div>
       </header>
+
+      {/* Mobile Navigation Menu */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="md:hidden fixed top-[73px] left-0 right-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#1A1A1A]"
+          >
+            <nav className="flex flex-col p-2 gap-1">
+              {([
+                { id: 'ai-prompt', label: 'AI Prompt' },
+                { id: 'd5-tutorial', label: 'D5 Tutorial' },
+                { id: 'showcase', label: 'Showcase' },
+                { id: 'library', label: 'Library' },
+              ] as { id: TabId; label: string }[]).map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full px-4 py-3 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all text-left ${
+                    activeTab === tab.id
+                      ? 'bg-[#F27D26] text-black shadow-[0_0_15px_rgba(242,125,38,0.3)]'
+                      : 'text-[#888] hover:text-white hover:bg-[#1A1A1A]'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Error Toast */}
       <AnimatePresence>
