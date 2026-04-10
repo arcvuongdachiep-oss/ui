@@ -2,13 +2,15 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { RotateCcw, Zap, Crown, AlertCircle, X, LogOut, ChevronDown, Clock, Loader2, MessageCircle, ExternalLink } from "lucide-react";
+import { RotateCcw, Zap, Crown, AlertCircle, X, LogOut, ChevronDown, Clock, Loader2, MessageCircle, ExternalLink, Menu } from "lucide-react";
 import Image from "next/image";
-import type { ModeId, PromptResult, TabId } from "@/lib/types";
+import type { ModeId, PromptResult, TabId, PromptHistoryItem } from "@/lib/types";
 import { ModeSelector, MODES } from "@/components/mode-selector";
 import { Camera, Layers, Grid3X3, BookOpen } from "lucide-react";
 import { ImageUploader } from "@/components/image-uploader";
 import { ResultsPanel } from "@/components/results-panel";
+import { PromptHistory } from "@/components/prompt-history";
+import { usePromptHistory } from "@/hooks/usePromptHistory";
 import { 
   optimizeImage, 
   estimateTokens, 
@@ -35,6 +37,7 @@ interface QueueStatus {
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabId>('ai-prompt');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedMode, setSelectedMode] = useState<ModeId | null>(null);
   const [baseImages, setBaseImages] = useState<string[]>([]);
   const [optimizedBaseImages, setOptimizedBaseImages] = useState<OptimizedImage[]>([]);
@@ -56,7 +59,11 @@ export default function Home() {
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
   const [cooldownTime, setCooldownTime] = useState(0);
+  const [userInstructions, setUserInstructions] = useState("");
   const cooldownRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Prompt History hook
+  const { items: historyItems, isLoading: historyLoading, savePromptHistory, deletePromptHistory } = usePromptHistory();
 
   // Cleanup cooldown timer
   useEffect(() => {
@@ -261,6 +268,7 @@ export default function Home() {
           baseImages: optimizedBaseDataUrls,
           refImage: optimizedRefImage?.dataUrl || null,
           mode: selectedMode,
+          userInstructions: userInstructions.trim() || null,
         }),
       });
 
@@ -300,6 +308,15 @@ export default function Home() {
       setStatusMessage("Hoan thanh!");
       setResults(data.results);
       
+      // Save to prompt history
+      if (data.results && data.results.length > 0) {
+        savePromptHistory(
+          data.results[0].prompt,
+          baseImages[0] || undefined,
+          optimizedRefImage?.dataUrl || undefined
+        );
+      }
+      
       // Update local credits after successful generation
       if (data.remainingCredits !== undefined && data.remainingCredits >= 0) {
         setUserProfile(prev => prev ? {
@@ -324,6 +341,21 @@ export default function Home() {
     navigator.clipboard.writeText(text);
     setCopiedId(index);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleSelectPromptHistory = async (item: PromptHistoryItem) => {
+    // Restore form with history data
+    setResults([]);
+    setUserInstructions("");
+    
+    // Set the prompt content as user instructions for display
+    if (item.prompt) {
+      setUserInstructions(item.prompt.substring(0, 100));
+    }
+    
+    // Scroll to top and set to AI prompt tab
+    setActiveTab('ai-prompt');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const reset = () => {
@@ -367,7 +399,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Tab Navigation */}
+          {/* Tab Navigation - Desktop */}
           <nav className="hidden md:flex items-center gap-1 bg-black/50 p-1 rounded-lg border border-[#1A1A1A]">
             {([
               { id: 'ai-prompt', label: 'AI Prompt' },
@@ -388,6 +420,15 @@ export default function Home() {
               </button>
             ))}
           </nav>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden p-2 rounded-lg bg-black/50 border border-[#1A1A1A] text-[#888] hover:text-white hover:border-[#F27D26]/50 transition-all"
+            aria-label="Toggle menu"
+          >
+            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
         <div className="flex items-center gap-3">
           {/* User Profile & Credits Display */}
@@ -515,6 +556,42 @@ export default function Home() {
           </motion.button>
         </div>
       </header>
+
+      {/* Mobile Navigation Menu */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="md:hidden fixed top-[73px] left-0 right-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#1A1A1A]"
+          >
+            <nav className="flex flex-col p-2 gap-1">
+              {([
+                { id: 'ai-prompt', label: 'AI Prompt' },
+                { id: 'd5-tutorial', label: 'D5 Tutorial' },
+                { id: 'showcase', label: 'Showcase' },
+                { id: 'library', label: 'Library' },
+              ] as { id: TabId; label: string }[]).map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full px-4 py-3 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all text-left ${
+                    activeTab === tab.id
+                      ? 'bg-[#F27D26] text-black shadow-[0_0_15px_rgba(242,125,38,0.3)]'
+                      : 'text-[#888] hover:text-white hover:bg-[#1A1A1A]'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Error Toast */}
       <AnimatePresence>
@@ -681,6 +758,8 @@ export default function Home() {
                       statusMessage={statusMessage}
                       isButtonDisabled={isButtonDisabled || optimizingIndices.length > 0 || isRefOptimizing}
                       cooldownTime={cooldownTime}
+                      userInstructions={userInstructions}
+                      onUserInstructionsChange={setUserInstructions}
                       onBack={() => setSelectedMode(null)}
                       onBaseUpload={handleBaseUpload}
                       onRefUpload={handleRefUpload}
@@ -695,6 +774,22 @@ export default function Home() {
                       results={results}
                     />
                   </div>
+
+                  {/* Prompt History */}
+                  {historyItems.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-8 pt-6 border-t border-[#1A1A1A] bg-[#0A0A0A] rounded-xl"
+                    >
+                      <PromptHistory
+                        items={historyItems}
+                        onSelectHistory={handleSelectPromptHistory}
+                        onDeleteHistory={deletePromptHistory}
+                        isLoading={historyLoading}
+                      />
+                    </motion.div>
+                  )}
                 </motion.div>
               )}
 
