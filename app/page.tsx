@@ -4,11 +4,13 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { RotateCcw, Zap, Crown, AlertCircle, X, LogOut, ChevronDown, Clock, Loader2, MessageCircle, ExternalLink, Menu } from "lucide-react";
 import Image from "next/image";
-import type { ModeId, PromptResult, TabId } from "@/lib/types";
+import type { ModeId, PromptResult, TabId, PromptHistoryItem } from "@/lib/types";
 import { ModeSelector, MODES } from "@/components/mode-selector";
 import { Camera, Layers, Grid3X3, BookOpen } from "lucide-react";
 import { ImageUploader } from "@/components/image-uploader";
 import { ResultsPanel } from "@/components/results-panel";
+import { PromptHistory } from "@/components/prompt-history";
+import { usePromptHistory } from "@/hooks/usePromptHistory";
 import { 
   optimizeImage, 
   estimateTokens, 
@@ -59,6 +61,9 @@ export default function Home() {
   const [cooldownTime, setCooldownTime] = useState(0);
   const [userInstructions, setUserInstructions] = useState("");
   const cooldownRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Prompt History hook
+  const { items: historyItems, isLoading: historyLoading, savePromptHistory, deletePromptHistory } = usePromptHistory();
 
   // Cleanup cooldown timer
   useEffect(() => {
@@ -303,6 +308,15 @@ export default function Home() {
       setStatusMessage("Hoan thanh!");
       setResults(data.results);
       
+      // Save to prompt history
+      if (data.results && data.results.length > 0) {
+        savePromptHistory(
+          data.results[0].prompt,
+          baseImages[0] || undefined,
+          optimizedRefImage?.dataUrl || undefined
+        );
+      }
+      
       // Update local credits after successful generation
       if (data.remainingCredits !== undefined && data.remainingCredits >= 0) {
         setUserProfile(prev => prev ? {
@@ -327,6 +341,21 @@ export default function Home() {
     navigator.clipboard.writeText(text);
     setCopiedId(index);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleSelectPromptHistory = async (item: PromptHistoryItem) => {
+    // Restore form with history data
+    setResults([]);
+    setUserInstructions("");
+    
+    // Set the prompt content as user instructions for display
+    if (item.prompt) {
+      setUserInstructions(item.prompt.substring(0, 100));
+    }
+    
+    // Scroll to top and set to AI prompt tab
+    setActiveTab('ai-prompt');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const reset = () => {
@@ -745,6 +774,22 @@ export default function Home() {
                       results={results}
                     />
                   </div>
+
+                  {/* Prompt History */}
+                  {historyItems.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-8 pt-6 border-t border-[#1A1A1A] bg-[#0A0A0A] rounded-xl"
+                    >
+                      <PromptHistory
+                        items={historyItems}
+                        onSelectHistory={handleSelectPromptHistory}
+                        onDeleteHistory={deletePromptHistory}
+                        isLoading={historyLoading}
+                      />
+                    </motion.div>
+                  )}
                 </motion.div>
               )}
 
