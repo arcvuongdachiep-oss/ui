@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
     recordRequest(user.id);
 
     const body = await request.json();
-    const { baseImages, refImage, mode, userInstructions } = body;
+    const { baseImages, refImage, mode } = body;
 
     // Validate mode
     if (!validateModeId(mode)) {
@@ -273,13 +273,10 @@ export async function POST(request: NextRequest) {
 
       if (isRandomMode) {
         // Random mode: generate 3 different angles
-        const userInstructionsText = userInstructions ? `\n\nCHỈ DẪN BỔ SUNG TỪ NGƯỜI DÙNG (BẮT BUỘC PHẢI THÊM VÀO PROMPT): ${userInstructions}` : '';
-        
         const systemInstruction = `
           BẠN LÀ MỘT ĐẠO DIỄN HÌNH ẢNH (DoP) CHUYÊN VỀ DIỄN HỌA KIẾN TRÚC. 
           NHIỆM VỤ: TẠO RA 3 BỘ PROMPT KHÁC NHAU (TRUNG CẢNH, CẬN CẢNH, CINEMATIC) DỰA TRÊN ẢNH BASE.
           ${base64Ref ? 'Sử dụng ảnh Style để lấy phong cách, ánh sáng và vật liệu.' : 'Vì không có ảnh Style, hãy tự đề xuất phong cách, ánh sáng và vật liệu chuyên nghiệp, sang trọng và thực tế nhất cho công trình.'}
-          ${userInstructionsText}
 
           ${modeConfig.instruction}
 
@@ -326,12 +323,9 @@ export async function POST(request: NextRequest) {
         }
       } else {
         // Standard modes: generate single prompt
-        const userInstructionsTextStd = userInstructions ? `\n\nCHỈ DẪN BỔ SUNG TỪ NGƯỜI DÙNG (BẮT BUỘC PHẢI THÊM VÀO PROMPT): ${userInstructions}` : '';
-        
         const systemInstruction = `
           BẠN LÀ MỘT ĐẠO DIỄN HÌNH ẢNH (DoP) CHUYÊN VỀ DIỄN HỌA KIẾN TRÚC. 
           NHIỆM VỤ: TẠO RA PROMPT DUY NHẤT DỰA TRÊN ẢNH BASE VÀ ẢNH STYLE THEO KỊCH BẢN SAU:
-          ${userInstructionsTextStd}
 
           ${modeConfig.instruction}
 
