@@ -344,18 +344,35 @@ export default function Home() {
   };
 
   const handleSelectPromptHistory = async (item: PromptHistoryItem) => {
-    // Restore form with history data
-    setResults([]);
-    setUserInstructions("");
+    // Null check to prevent crashes
+    if (!item) {
+      console.warn("Invalid history item selected");
+      return;
+    }
     
-    // Set the prompt content as user instructions for display
+    // Reset current results
+    setResults([]);
+    setErrorMessage(null);
+    
+    // Restore prompt as user instructions
     if (item.prompt) {
+      // Truncate to max 100 characters for user instructions field
       setUserInstructions(item.prompt.substring(0, 100));
     }
     
-    // Scroll to top and set to AI prompt tab
+    // Note: Base images and ref images are stored as URLs but the form expects 
+    // base64 data, so we only restore the prompt text. Users will need to 
+    // re-upload images if they want to use the same ones.
+    
+    // Switch to AI prompt tab
     setActiveTab('ai-prompt');
+    
+    // Scroll to top of page smoothly so user sees the form
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Show confirmation message
+    setStatusMessage("Da dien lai prompt tu lich su!");
+    setTimeout(() => setStatusMessage(null), 2000);
   };
 
   const reset = () => {
@@ -775,15 +792,15 @@ export default function Home() {
                     />
                   </div>
 
-                  {/* Prompt History */}
-                  {historyItems.length > 0 && (
+                  {/* Prompt History - with null safety */}
+                  {historyItems && historyItems.length > 0 && (
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       className="mt-8 pt-6 border-t border-[#1A1A1A] bg-[#0A0A0A] rounded-xl"
                     >
                       <PromptHistory
-                        items={historyItems}
+                        items={historyItems || []}
                         onSelectHistory={handleSelectPromptHistory}
                         onDeleteHistory={deletePromptHistory}
                         isLoading={historyLoading}
