@@ -1,10 +1,8 @@
 "use client";
 
 import { motion } from "motion/react";
-import { ShieldCheck, Zap, Film, LayoutGrid, ExternalLink } from "lucide-react";
-import type { ModeConfig } from "@/lib/types";
-
-const AI_STUDIO_URL = "https://ai.studio/apps/3de5c9d5-3387-4351-9a2e-70b3862a249f?fullscreenApplet=true";
+import { ShieldCheck, Zap, Film, LayoutGrid, ArrowRight } from "lucide-react";
+import type { ModeId, ModeConfig } from "@/lib/types";
 
 export const MODES: ModeConfig[] = [
   {
@@ -45,13 +43,11 @@ export const MODES: ModeConfig[] = [
   },
 ];
 
-// Simplified ModeSelector - just displays cards that redirect to AI Studio
-export function ModeSelector() {
-  const handleCardClick = () => {
-    // Open AI Studio in new tab
-    window.open(AI_STUDIO_URL, "_blank");
-  };
+interface ModeSelectorProps {
+  onSelectMode: (mode: ModeId) => void;
+}
 
+export function ModeSelector({ onSelectMode }: ModeSelectorProps) {
   return (
     <motion.div
       key="step1"
@@ -76,7 +72,7 @@ export function ModeSelector() {
           transition={{ delay: 0.2 }}
           className="text-[#666] uppercase tracking-[0.2em] md:tracking-[0.3em] text-[10px] md:text-xs font-bold"
         >
-          Click any card to open AI Studio
+          Choose a scientific script before configuring assets
         </motion.p>
       </div>
 
@@ -87,7 +83,7 @@ export function ModeSelector() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 * (index + 1) }}
-            onClick={handleCardClick}
+            onClick={() => onSelectMode(mode.id)}
             className="group relative bg-[#0A0A0A] border border-[#1A1A1A] p-6 md:p-8 rounded-2xl text-left hover:border-[#F27D26]/50 transition-all hover:translate-y-[-4px] flex flex-col h-full"
           >
             <div
@@ -114,7 +110,7 @@ export function ModeSelector() {
               </p>
             </div>
             <div className="relative mt-6 md:mt-8 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[#F27D26] opacity-0 group-hover:opacity-100 transition-opacity">
-              Open AI Studio <ExternalLink size={12} />
+              Select Mode <ArrowRight size={12} />
             </div>
           </motion.button>
         ))}
