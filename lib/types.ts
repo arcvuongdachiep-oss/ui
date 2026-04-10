@@ -19,12 +19,3 @@ export interface PromptResult {
   vietnamese: string;
   label?: string;
 }
-
-export interface PromptHistoryItem {
-  id: string;
-  user_id: string;
-  prompt: string;
-  base_image_url: string | null;
-  ref_image_url: string | null;
-  created_at: string;
-}
