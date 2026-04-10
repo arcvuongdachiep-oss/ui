@@ -2,9 +2,7 @@
 CREATE TABLE IF NOT EXISTS public.prompt_history (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  mode TEXT NOT NULL,
   prompt TEXT NOT NULL,
-  vietnamese_prompt TEXT,
   base_image_url TEXT,
   ref_image_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
