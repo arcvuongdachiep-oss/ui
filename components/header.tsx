@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import Image from "next/image";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Coins, Crown, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
@@ -21,11 +21,7 @@ export function Header() {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const pathname = usePathname();
   const router = useRouter();
-
-  // Don't show header on login page
-  const isLoginPage = pathname === "/login";
 
   useEffect(() => {
     const supabase = createClient();
@@ -102,23 +98,30 @@ export function Header() {
     router.push("/login");
   };
 
-  // Don't render on login page
-  if (isLoginPage) return null;
-
   // Don't render anything if still loading
   if (isLoading) {
     return (
       <header className="fixed top-0 right-0 z-50 p-4">
         <div className="flex items-center gap-3">
           <div className="h-8 w-24 bg-[#1A1A1A] rounded-full animate-pulse border border-[#2A2A2A]" />
-          <div className="w-9 h-9 bg-[#1A1A1A] rounded-full animate-pulse border-2 border-[#2A2A2A]" />
         </div>
       </header>
     );
   }
 
-  // Don't render if no user
-  if (!user) return null;
+  // Always render - show login button if no user
+  if (!user) {
+    return (
+      <header className="fixed top-0 right-0 z-50 p-4">
+        <Link
+          href="/login"
+          className="px-4 py-2 bg-[#F27D26] text-black font-bold uppercase text-sm rounded-lg hover:bg-[#E26D16] transition-colors"
+        >
+          Login
+        </Link>
+      </header>
+    );
+  }
 
   return (
     <header className="fixed top-0 right-0 z-50 p-4">
