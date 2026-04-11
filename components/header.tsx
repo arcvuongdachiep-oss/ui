@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { Coins, Crown, LogOut, X } from "lucide-react";
@@ -154,11 +155,11 @@ export function Header() {
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
-                className="bg-[#0A0A0A] border border-[#1A1A1A] rounded-2xl p-8 max-w-md w-full text-center space-y-6"
+                className="relative bg-[#0A0A0A] border border-[#1A1A1A] rounded-2xl p-8 max-w-md w-full text-center space-y-6"
               >
                 <button
                   onClick={() => setShowLoginModal(false)}
-                  className="absolute top-4 right-4 text-[#666] hover:text-white"
+                  className="absolute top-4 right-4 text-[#666] hover:text-white z-10"
                 >
                   <X className="w-6 h-6" />
                 </button>
