@@ -64,7 +64,7 @@ export default function Home() {
   const cooldownRef = useRef<NodeJS.Timeout | null>(null);
   
   // Auth state for protected tabs
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null); // null = loading
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
@@ -455,8 +455,8 @@ export default function Home() {
               <button
                 key={tab.id}
                 onClick={() => {
-                  // Check if tab requires login
-                  if (tab.protected && !isLoggedIn) {
+                  // Check if tab requires login (only show modal if auth check is complete and not logged in)
+                  if (tab.protected && isLoggedIn === false) {
                     setShowLoginModal(true);
                     return;
                   }
@@ -637,8 +637,8 @@ export default function Home() {
                 <button
                   key={tab.id}
                   onClick={() => {
-                    // Check if tab requires login
-                    if (tab.protected && !isLoggedIn) {
+                    // Check if tab requires login (only show modal if auth check is complete and not logged in)
+                    if (tab.protected && isLoggedIn === false) {
                       setShowLoginModal(true);
                       setIsMobileMenuOpen(false);
                       return;
