@@ -143,7 +143,7 @@ export function ProjectShowcase() {
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
           >
             {filteredProjects.map((project) => (
-              <Link key={project.id} href={`/projects/${project.id}`}>
+              <Link key={project.id} href={`/project/${project.id}`}>
                 <motion.div
                   whileHover={{ translateY: -8 }}
                   className="group cursor-pointer bg-[#0A0A0A] border border-[#1A1A1A] rounded-2xl overflow-hidden hover:border-[#F27D26]/50 transition-all"
