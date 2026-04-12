@@ -48,11 +48,11 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse
   }
 
-  // Protected routes that require authentication (NOT homepage - it's public)
-  const protectedRoutes = ['/dashboard', '/protected']
+  // Protected routes that require authentication (including home page)
+  const protectedRoutes = ['/', '/dashboard', '/protected']
   const isProtectedRoute = protectedRoutes.some(route => 
     request.nextUrl.pathname === route || 
-    request.nextUrl.pathname.startsWith(route)
+    (route !== '/' && request.nextUrl.pathname.startsWith(route))
   )
 
   // If user is logged in and trying to access login page, redirect to home immediately
