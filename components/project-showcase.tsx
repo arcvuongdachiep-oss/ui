@@ -19,82 +19,6 @@ interface Project {
   is_featured: boolean;
 }
 
-// Mock data for development/demo when database is empty
-const MOCK_PROJECTS: Project[] = [
-  {
-    id: "mock-1",
-    title: "Modern Villa Exterior",
-    description: "Stunning modern villa with pool and garden. Full D5 Render project with complete materials and lighting setup.",
-    thumbnail_url: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&q=80",
-    download_cost: 5,
-    view_count: 1234,
-    download_count: 89,
-    category: "Residential",
-    software_tags: ["D5 Render", "SketchUp", "Lumion"],
-    is_featured: true,
-  },
-  {
-    id: "mock-2",
-    title: "Luxury Apartment Interior",
-    description: "Contemporary apartment design with high-end finishes. Includes all furniture models and material library.",
-    thumbnail_url: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80",
-    download_cost: 3,
-    view_count: 856,
-    download_count: 45,
-    category: "Interior",
-    software_tags: ["D5 Render", "3ds Max"],
-    is_featured: true,
-  },
-  {
-    id: "mock-3",
-    title: "Office Building Complex",
-    description: "Corporate office building with modern glass facade. Complete exterior and interior scenes included.",
-    thumbnail_url: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80",
-    download_cost: 8,
-    view_count: 567,
-    download_count: 23,
-    category: "Commercial",
-    software_tags: ["D5 Render", "Revit", "Enscape"],
-    is_featured: false,
-  },
-  {
-    id: "mock-4",
-    title: "Minimalist Beach House",
-    description: "Coastal retreat with panoramic ocean views. Sunset and daytime lighting presets included.",
-    thumbnail_url: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&q=80",
-    download_cost: 4,
-    view_count: 2341,
-    download_count: 156,
-    category: "Residential",
-    software_tags: ["D5 Render", "SketchUp"],
-    is_featured: true,
-  },
-  {
-    id: "mock-5",
-    title: "Urban Loft Design",
-    description: "Industrial-style loft with exposed brick and modern furnishings. Perfect for portfolio projects.",
-    thumbnail_url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80",
-    download_cost: 2,
-    view_count: 432,
-    download_count: 67,
-    category: "Interior",
-    software_tags: ["D5 Render", "Blender"],
-    is_featured: false,
-  },
-  {
-    id: "mock-6",
-    title: "Tropical Resort Hotel",
-    description: "Luxury resort with infinity pool and tropical landscaping. Multiple camera angles and time-of-day settings.",
-    thumbnail_url: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800&q=80",
-    download_cost: 10,
-    view_count: 789,
-    download_count: 34,
-    category: "Hospitality",
-    software_tags: ["D5 Render", "SketchUp", "Twinmotion"],
-    is_featured: true,
-  },
-];
-
 export function ProjectShowcase() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
@@ -111,23 +35,11 @@ export function ProjectShowcase() {
       const response = await fetch("/api/projects");
       if (response.ok) {
         const data = await response.json();
-        // Use mock data if database is empty
-        if (data.length === 0) {
-          setProjects(MOCK_PROJECTS);
-          setFilteredProjects(MOCK_PROJECTS);
-        } else {
-          setProjects(data);
-          setFilteredProjects(data);
-        }
-      } else {
-        // Fallback to mock data on error
-        setProjects(MOCK_PROJECTS);
-        setFilteredProjects(MOCK_PROJECTS);
+        setProjects(data);
+        setFilteredProjects(data);
       }
     } catch (error) {
-      console.error("[v0] Failed to fetch projects, using mock data:", error);
-      setProjects(MOCK_PROJECTS);
-      setFilteredProjects(MOCK_PROJECTS);
+      console.error("[v0] Failed to fetch projects:", error);
     } finally {
       setLoading(false);
     }
@@ -231,7 +143,7 @@ export function ProjectShowcase() {
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
           >
             {filteredProjects.map((project) => (
-              <Link key={project.id} href={`/project/${project.id}`}>
+              <Link key={project.id} href={`/projects/${project.id}`}>
                 <motion.div
                   whileHover={{ translateY: -8 }}
                   className="group cursor-pointer bg-[#0A0A0A] border border-[#1A1A1A] rounded-2xl overflow-hidden hover:border-[#F27D26]/50 transition-all"
