@@ -19,13 +19,13 @@ interface Project {
   download_count: number;
 }
 
-// Mock data for fallback
+// Mock data for fallback - matches IDs in project-showcase.tsx
 const MOCK_PROJECTS: Record<string, Project> = {
   'mock-1': {
     id: 'mock-1',
     title: 'Modern Villa Exterior',
     description: 'Stunning modern villa with pool and garden. Full D5 Render project with complete materials and lighting setup. Includes high-resolution textures and professional camera angles.',
-    video_url: 'https://yourdomain.com/video1.mp4',
+    video_url: '',
     gallery_urls: [
       'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200&q=80',
       'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&q=80',
@@ -36,6 +36,81 @@ const MOCK_PROJECTS: Record<string, Project> = {
     download_cost: 5,
     view_count: 1234,
     download_count: 89,
+  },
+  'mock-2': {
+    id: 'mock-2',
+    title: 'Luxury Apartment Interior',
+    description: 'Contemporary apartment design with high-end finishes. Includes all furniture models and material library.',
+    video_url: '',
+    gallery_urls: [
+      'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&q=80',
+      'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&q=80',
+      'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1200&q=80',
+    ],
+    software_tags: ['D5 Render', '3ds Max'],
+    download_cost: 3,
+    view_count: 856,
+    download_count: 45,
+  },
+  'mock-3': {
+    id: 'mock-3',
+    title: 'Office Building Complex',
+    description: 'Corporate office building with modern glass facade. Complete exterior and interior scenes included.',
+    video_url: '',
+    gallery_urls: [
+      'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&q=80',
+      'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&q=80',
+      'https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=1200&q=80',
+    ],
+    software_tags: ['D5 Render', 'Revit', 'Enscape'],
+    download_cost: 8,
+    view_count: 567,
+    download_count: 23,
+  },
+  'mock-4': {
+    id: 'mock-4',
+    title: 'Minimalist Beach House',
+    description: 'Coastal retreat with panoramic ocean views. Sunset and daytime lighting presets included.',
+    video_url: '',
+    gallery_urls: [
+      'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&q=80',
+      'https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?w=1200&q=80',
+      'https://images.unsplash.com/photo-1523217582562-09d0def993a6?w=1200&q=80',
+    ],
+    software_tags: ['D5 Render', 'SketchUp'],
+    download_cost: 4,
+    view_count: 2341,
+    download_count: 156,
+  },
+  'mock-5': {
+    id: 'mock-5',
+    title: 'Urban Loft Design',
+    description: 'Industrial-style loft with exposed brick and modern furnishings. Perfect for portfolio projects.',
+    video_url: '',
+    gallery_urls: [
+      'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&q=80',
+      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200&q=80',
+      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&q=80',
+    ],
+    software_tags: ['D5 Render', 'Blender'],
+    download_cost: 2,
+    view_count: 432,
+    download_count: 67,
+  },
+  'mock-6': {
+    id: 'mock-6',
+    title: 'Tropical Resort Hotel',
+    description: 'Luxury resort with infinity pool and tropical landscaping. Multiple camera angles and time-of-day settings.',
+    video_url: '',
+    gallery_urls: [
+      'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=1200&q=80',
+      'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&q=80',
+      'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1200&q=80',
+    ],
+    software_tags: ['D5 Render', 'SketchUp', 'Twinmotion'],
+    download_cost: 10,
+    view_count: 789,
+    download_count: 34,
   },
 };
 
