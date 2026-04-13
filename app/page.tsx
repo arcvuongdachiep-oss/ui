@@ -10,6 +10,7 @@ import { Camera, Layers, Grid3X3, BookOpen } from "lucide-react";
 import { ImageUploader } from "@/components/image-uploader";
 import { ResultsPanel } from "@/components/results-panel";
 import { PromptHistory } from "@/components/prompt-history";
+import { ProjectShowcase } from "@/components/project-showcase";
 import { usePromptHistory } from "@/hooks/usePromptHistory";
 import { 
   optimizeImage, 
@@ -1043,42 +1044,9 @@ export default function Home() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="py-8 md:py-12 space-y-12"
+              className="py-8 md:py-12"
             >
-              <div className="text-center space-y-4">
-                <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter italic">
-                  <span className="text-white">GALLERY</span> <span className="text-[#F27D26]">SHOWCASE</span>
-                </h2>
-                <p className="text-[#666] uppercase tracking-[0.3em] md:tracking-[0.4em] text-[9px] md:text-[10px] font-bold">The intersection of AI precision and human creativity</p>
-              </div>
-
-              {/* Masonry Gallery */}
-              <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4">
-                {[...Array(12)].map((_, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    className="break-inside-avoid mb-4 group"
-                  >
-                    <div className="relative rounded-xl overflow-hidden border border-[#1A1A1A] hover:border-[#F27D26]/30 transition-all">
-                      <img
-                        src={`https://picsum.photos/seed/showcase${i}/${400 + (i % 3) * 100}/${300 + (i % 4) * 100}`}
-                        alt={`Showcase ${i + 1}`}
-                        className="w-full h-auto grayscale hover:grayscale-0 transition-all duration-500 group-hover:scale-105"
-                        referrerPolicy="no-referrer"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="absolute bottom-4 left-4 right-4">
-                          <p className="text-[10px] text-[#F27D26] uppercase tracking-widest font-bold">Project Alpha {i + 1}</p>
-                          <p className="text-[8px] text-white/60 uppercase tracking-wider">Rendered with AI + D5</p>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+              <ProjectShowcase />
             </motion.div>
           ) : activeTab === 'library' ? (
             <motion.div
