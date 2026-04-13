@@ -73,9 +73,9 @@ export function ProjectShowcase() {
                 className="group cursor-pointer bg-[#0A0A0A] border border-[#1A1A1A] rounded-xl overflow-hidden hover:border-[#F27D26]/50 transition-all"
               >
                 <div className="relative aspect-video overflow-hidden bg-[#1A1A1A]">
-                  {project.thumbnail_url ? (
+                  {(project.thumbnail_url || project.gallery_urls?.[0]) ? (
                     <Image
-                      src={project.thumbnail_url}
+                      src={project.thumbnail_url || project.gallery_urls![0]}
                       alt={project.title}
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -138,9 +138,9 @@ export function ProjectShowcase() {
                   className="group cursor-pointer bg-[#0A0A0A] border border-[#1A1A1A] rounded-lg overflow-hidden hover:border-[#F27D26]/50 transition-all"
                 >
                   <div className="relative aspect-square overflow-hidden bg-[#1A1A1A]">
-                    {project.thumbnail_url ? (
+                    {(project.thumbnail_url || project.gallery_urls?.[0]) ? (
                       <Image
-                        src={project.thumbnail_url}
+                        src={project.thumbnail_url || project.gallery_urls![0]}
                         alt={project.title}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-300"

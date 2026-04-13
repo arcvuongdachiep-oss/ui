@@ -154,10 +154,10 @@ export default function ProjectDetail() {
 
           {/* Thumbnail */}
           <div className="space-y-4">
-            {project.thumbnail_url && (
+            {(project.thumbnail_url || project.gallery_urls?.[0]) && (
               <div className="bg-[#1A1A1A] rounded-lg overflow-hidden">
                 <Image
-                  src={project.thumbnail_url}
+                  src={project.thumbnail_url || project.gallery_urls[0]}
                   alt={project.title}
                   width={300}
                   height={300}
