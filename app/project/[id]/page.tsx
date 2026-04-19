@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
@@ -47,6 +47,37 @@ export default function ProjectDetail() {
 
     fetchProject();
   }, [projectId]);
+
+  const openLightbox = useCallback((index: number) => {
+    setSelectedImageIndex(index);
+    setShowLightbox(true);
+  }, []);
+
+  const closeLightbox = useCallback(() => setShowLightbox(false), []);
+
+  const prevImage = useCallback(() => {
+    setSelectedImageIndex((prev) =>
+      prev === 0 ? (project?.gallery_urls.length ?? 1) - 1 : prev - 1
+    );
+  }, [project]);
+
+  const nextImage = useCallback(() => {
+    setSelectedImageIndex((prev) =>
+      prev === (project?.gallery_urls.length ?? 1) - 1 ? 0 : prev + 1
+    );
+  }, [project]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    if (!showLightbox) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeLightbox();
+      if (e.key === "ArrowLeft") prevImage();
+      if (e.key === "ArrowRight") nextImage();
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [showLightbox, closeLightbox, prevImage, nextImage]);
 
   if (loading) {
     return (
@@ -191,10 +222,7 @@ export default function ProjectDetail() {
                   whileHover={{ scale: 1.02 }}
                   transition={{ duration: 0.2 }}
                   className="relative aspect-video bg-[#1A1A1A] rounded-lg overflow-hidden cursor-zoom-in group border border-[#1A1A1A] hover:border-[#F27D26]/40 transition-colors"
-                  onClick={() => {
-                    setSelectedImageIndex(index);
-                    setShowLightbox(true);
-                  }}
+                  onClick={() => openLightbox(index)}
                 >
                   <Image
                     src={url}
@@ -230,12 +258,12 @@ export default function ProjectDetail() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center"
-            onClick={() => setShowLightbox(false)}
+            onClick={closeLightbox}
           >
             {/* Close button */}
             <button
               className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/10 hover:bg-[#F27D26] rounded-full flex items-center justify-center text-white transition-colors"
-              onClick={() => setShowLightbox(false)}
+              onClick={closeLightbox}
             >
               <X className="w-5 h-5" />
             </button>
@@ -268,24 +296,14 @@ export default function ProjectDetail() {
               <>
                 <button
                   className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white/10 hover:bg-[#F27D26] rounded-full flex items-center justify-center text-white transition-colors"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedImageIndex((prev) =>
-                      prev === 0 ? project.gallery_urls.length - 1 : prev - 1
-                    );
-                  }}
+                  onClick={(e) => { e.stopPropagation(); prevImage(); }}
                 >
                   <ChevronLeft className="w-6 h-6" />
                 </button>
 
                 <button
                   className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white/10 hover:bg-[#F27D26] rounded-full flex items-center justify-center text-white transition-colors"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedImageIndex((prev) =>
-                      prev === project.gallery_urls.length - 1 ? 0 : prev + 1
-                    );
-                  }}
+                  onClick={(e) => { e.stopPropagation(); nextImage(); }}
                 >
                   <ChevronRight className="w-6 h-6" />
                 </button>
