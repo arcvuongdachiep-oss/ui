@@ -183,45 +183,39 @@ export default function ProjectDetail() {
           <div className="py-8 space-y-6">
             <h2 className="text-2xl font-black uppercase tracking-wider">Thư Viện Ảnh</h2>
 
-            {/* Main Image */}
-            <div
-              className="relative aspect-video bg-[#1A1A1A] rounded-lg overflow-hidden cursor-pointer group"
-              onClick={() => setShowLightbox(true)}
-            >
-              <Image
-                src={currentImage}
-                alt={`Gallery ${selectedImageIndex}`}
-                fill
-                className="object-cover"
-              />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                <div className="w-12 h-12 bg-black/50 rounded-full flex items-center justify-center group-hover:bg-black/70 transition-colors">
-                  <svg className="w-6 h-6 text-white fill-current" viewBox="0 0 20 20">
-                    <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            {/* Thumbnails */}
-            <div className="grid grid-cols-4 gap-4">
+            {/* Image Grid - each image opens lightbox on click */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {project.gallery_urls.map((url, index) => (
-                <div
+                <motion.div
                   key={index}
-                  className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer border-2 transition-all ${
-                    selectedImageIndex === index
-                      ? "border-[#F27D26]"
-                      : "border-[#1A1A1A] hover:border-[#333]"
-                  }`}
-                  onClick={() => setSelectedImageIndex(index)}
+                  whileHover={{ scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
+                  className="relative aspect-video bg-[#1A1A1A] rounded-lg overflow-hidden cursor-zoom-in group border border-[#1A1A1A] hover:border-[#F27D26]/40 transition-colors"
+                  onClick={() => {
+                    setSelectedImageIndex(index);
+                    setShowLightbox(true);
+                  }}
                 >
                   <Image
                     src={url}
-                    alt={`Thumbnail ${index}`}
+                    alt={`Ảnh ${index + 1}`}
                     fill
-                    className="object-cover"
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   />
-                </div>
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-center justify-center">
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/60 rounded-full p-3">
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                      </svg>
+                    </div>
+                  </div>
+                  {/* Image counter badge */}
+                  <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs font-bold px-2 py-1 rounded">
+                    {index + 1} / {project.gallery_urls.length}
+                  </div>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -235,52 +229,90 @@ export default function ProjectDetail() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4"
+            className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center"
             onClick={() => setShowLightbox(false)}
           >
+            {/* Close button */}
             <button
-              className="absolute top-4 right-4 text-white hover:text-[#F27D26]"
+              className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/10 hover:bg-[#F27D26] rounded-full flex items-center justify-center text-white transition-colors"
               onClick={() => setShowLightbox(false)}
             >
-              <X className="w-8 h-8" />
+              <X className="w-5 h-5" />
             </button>
 
-            <div className="relative w-full h-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            {/* Counter */}
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-black/60 text-white text-sm font-bold px-4 py-1.5 rounded-full">
+              {selectedImageIndex + 1} / {project.gallery_urls.length}
+            </div>
+
+            {/* Image container */}
+            <motion.div
+              key={selectedImageIndex}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.2 }}
+              className="relative w-full h-full max-w-6xl max-h-[90vh] mx-4 flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
               <Image
                 src={currentImage}
-                alt="Lightbox"
+                alt={`Ảnh ${selectedImageIndex + 1}`}
                 fill
                 className="object-contain"
+                sizes="100vw"
               />
+            </motion.div>
 
-              {project.gallery_urls.length > 1 && (
-                <>
+            {/* Navigation arrows */}
+            {project.gallery_urls.length > 1 && (
+              <>
+                <button
+                  className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white/10 hover:bg-[#F27D26] rounded-full flex items-center justify-center text-white transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedImageIndex((prev) =>
+                      prev === 0 ? project.gallery_urls.length - 1 : prev - 1
+                    );
+                  }}
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+
+                <button
+                  className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white/10 hover:bg-[#F27D26] rounded-full flex items-center justify-center text-white transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedImageIndex((prev) =>
+                      prev === project.gallery_urls.length - 1 ? 0 : prev + 1
+                    );
+                  }}
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              </>
+            )}
+
+            {/* Thumbnail strip */}
+            {project.gallery_urls.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2">
+                {project.gallery_urls.map((url, idx) => (
                   <button
-                    className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 text-white rounded"
+                    key={idx}
                     onClick={(e) => {
                       e.stopPropagation();
-                      setSelectedImageIndex((prev) =>
-                        prev === 0 ? project.gallery_urls.length - 1 : prev - 1
-                      );
+                      setSelectedImageIndex(idx);
                     }}
+                    className={`relative w-14 h-10 rounded overflow-hidden border-2 transition-all ${
+                      idx === selectedImageIndex
+                        ? "border-[#F27D26] opacity-100"
+                        : "border-white/20 opacity-50 hover:opacity-80"
+                    }`}
                   >
-                    <ChevronLeft className="w-6 h-6" />
+                    <Image src={url} alt={`thumb-${idx}`} fill className="object-cover" sizes="56px" />
                   </button>
-
-                  <button
-                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 text-white rounded"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedImageIndex((prev) =>
-                        prev === project.gallery_urls.length - 1 ? 0 : prev + 1
-                      );
-                    }}
-                  >
-                    <ChevronRight className="w-6 h-6" />
-                  </button>
-                </>
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
