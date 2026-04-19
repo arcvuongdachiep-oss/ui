@@ -137,7 +137,7 @@ export function ProjectShowcase() {
                   whileHover={{ scale: 1.02 }}
                   className="group cursor-pointer bg-[#0A0A0A] border border-[#1A1A1A] rounded-lg overflow-hidden hover:border-[#F27D26]/50 transition-all"
                 >
-                  <div className="relative aspect-square overflow-hidden bg-[#1A1A1A]">
+                  <div className="relative aspect-video overflow-hidden bg-[#1A1A1A]">
                     {(project.thumbnail_url || project.gallery_urls?.[0]) ? (
                       <Image
                         src={project.thumbnail_url || project.gallery_urls![0]}
