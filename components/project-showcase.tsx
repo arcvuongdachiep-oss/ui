@@ -267,5 +267,6 @@ export function ProjectShowcase() {
         </div>
       )}
     </div>
+    </>
   );
 }
