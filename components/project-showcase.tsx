@@ -165,9 +165,6 @@ export function ProjectShowcase() {
                     </div>
                   )}
                 </div>
-                  )}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-                </div>
 
                 <div className="p-4 space-y-3">
                   <div>
@@ -203,7 +200,8 @@ export function ProjectShowcase() {
                 </div>
               </motion.div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -212,16 +210,25 @@ export function ProjectShowcase() {
         <div>
           <h2 className="text-2xl font-black uppercase tracking-wider mb-6">Tất Cả Dự Án</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {projects.filter(p => !p.is_featured).map((project) => (
+            {projects.filter(p => !p.is_featured).map((project) => {
+              const thumb = project.thumbnail_url || project.gallery_urls?.[0] || "";
+              return (
               <Link key={project.id} href={`/project/${project.id}`}>
                 <motion.div
                   whileHover={{ scale: 1.02 }}
                   className="group cursor-pointer bg-[#0A0A0A] border border-[#1A1A1A] rounded-lg overflow-hidden hover:border-[#F27D26]/50 transition-all"
                 >
-                  <div className="relative aspect-video overflow-hidden bg-[#1A1A1A]">
-                    {(project.thumbnail_url || project.gallery_urls?.[0]) ? (
+                  <div
+                    className="relative aspect-video overflow-hidden bg-[#1A1A1A] cursor-zoom-in"
+                    onClick={(e) => {
+                      if (!thumb) return;
+                      e.preventDefault();
+                      setPreview({ imageUrl: thumb, title: project.title, projectId: project.id });
+                    }}
+                  >
+                    {thumb ? (
                       <Image
-                        src={project.thumbnail_url || project.gallery_urls![0]}
+                        src={thumb}
                         alt={project.title}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -229,6 +236,14 @@ export function ProjectShowcase() {
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-[#666]">
                         Không có ảnh
+                      </div>
+                    )}
+                    {/* Zoom hint */}
+                    {thumb && (
+                      <div className="absolute bottom-2 right-2 bg-black/60 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                        </svg>
                       </div>
                     )}
                   </div>
@@ -246,7 +261,8 @@ export function ProjectShowcase() {
                   </div>
                 </motion.div>
               </Link>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
