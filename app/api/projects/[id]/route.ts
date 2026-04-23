@@ -7,16 +7,19 @@ export async function GET(
 ) {
   try {
     const { id } = params;
+    console.log("[v0] Fetching project with ID:", id);
     const supabase = await createClient();
 
     const { data, error } = await supabase
       .from("projects")
       .select("*")
       .eq("id", id)
-      .eq("is_published", true)
       .single();
 
+    console.log("[v0] Query result - Data:", data, "Error:", error);
+
     if (error || !data) {
+      console.error("[v0] Project not found:", error?.message || "No data returned");
       return NextResponse.json(
         { error: "Project not found" },
         { status: 404 }
